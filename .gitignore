@@ -6,6 +6,10 @@ __pycache__/
 # C extensions
 *.so
 
+events/*.json
+settings.json
+libs/
+
 # Distribution / packaging
 .Python
 build/
