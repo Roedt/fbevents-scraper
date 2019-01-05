@@ -186,21 +186,7 @@ def fetch():
     reactor.run()
 
 def run(d, f):
-    i = 0
     fetch()
-#    while i < 4:
-        #try:
-        #    fetch()
-         #   return
-        #except error.ReactorNotRestartable as e:
-         #   print('ReactorNotRestartableError, number ' + str(i))
-          #  print(e)
-          #  i +=1
-           # if reactor.running:
-	        #    reactor.stop()
-            #time.sleep(3)
-            #continue
-
 
 if runningLocally:
-    fetch()
+    run(None, None)
