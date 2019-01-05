@@ -9,6 +9,7 @@ __pycache__/
 events/*.json
 settings.json
 libs/
+pages.txt
 
 # Distribution / packaging
 .Python
