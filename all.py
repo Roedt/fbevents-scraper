@@ -147,6 +147,7 @@ class FacebookEventSpider(scrapy.Spider):
     def writeEventToFile(self, response, fevent):
         url = response.url.replace('https://m.facebook.com/events/', '')
         name = self.target_username +"_" + url + '.json'
+        name = name.lower()
         print('Saving ' + name)
         if (runningLocally):
             self.saveToLocalFile(name, fevent)
