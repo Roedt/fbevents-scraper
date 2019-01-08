@@ -152,7 +152,7 @@ class FacebookEventSpider(scrapy.Spider):
         if (runningLocally):
             self.saveToLocalFile(name, fevent)
         else:
-            self.upload_blob('fb-events2', str(fevent), name)
+            self.upload_blob('fb-events2', json.dumps(fevent.__dict__), name)
 
     @staticmethod
     def create_fb_event_ajax_url(page_id, serialized_cursor, see_more_id):
