@@ -62,8 +62,8 @@ class FacebookEventSpider(scrapy.Spider):
                               callback=self._get_fb_event_links)
 
     def _get_fb_event_links(self, response):
-        html_resp_unicode_decoded = str(
-            response.body.decode('unicode_escape')).replace('\\', '')
+        html_resp_unicode_decoded = response.body.decode('unicode_escape').replace('\\/', '/')
+        print(html_resp_unicode_decoded)
 
         def get_see_more_id():
             # Get the next see more id
@@ -83,28 +83,7 @@ class FacebookEventSpider(scrapy.Spider):
                 return serialized_cursor_search.group(1)
             return None
 
-        # Extract event urls from fb event ajax response.
-        event_url_regex = re.compile(r'href=\"(/events/\d+)')
-        event_urls = set(
-            re.findall(event_url_regex, html_resp_unicode_decoded)
-        )
-        for event_url in event_urls:
-            yield scrapy.Request(urljoin(self.top_url, event_url),
-                                 callback=self._parse_event)
-
-        # Check if there are `serialized_cursor` and `see_more_id` attached in
-        # the ajax response.
-        next_serialized_cursor = get_serialized_cursor()
-        next_see_more_id = get_see_more_id()
-        if next_serialized_cursor and next_see_more_id:
-            yield scrapy.Request(self.create_fb_event_ajax_url(
-                self.fb_page_id,
-                next_serialized_cursor,
-                next_see_more_id),
-                callback=self._get_fb_event_links)
-
-    def _parse_event(self, response):
-        html_str = str(response.body)
+    def _parse_event(self, html_str):
         soup = BeautifulSoup(html_str, 'html.parser')
 
         def get_event_summary():
@@ -130,6 +109,7 @@ class FacebookEventSpider(scrapy.Spider):
         fevent['url'] = response.url
         fevent['summary_date'], fevent['summary_place'] = get_event_summary()
         fevent['title'] = get_event_title()
+        print(fevent['title'])
         self.writeEventToFile(response, fevent)
         return fevent
 
@@ -148,8 +128,8 @@ class FacebookEventSpider(scrapy.Spider):
         with open('events/' + name, 'w') as outfile:
             json.dump(fevent.__dict__, outfile)
 
-    def writeEventToFile(self, response, fevent):
-        url = response.url.replace('https://m.facebook.com/events/', '')
+    def writeEventToFile(self, urlIn, fevent):
+        url = urlIn.replace('https://m.facebook.com/events/', '')
         name = self.target_username +"_" + url + '.json'
         name = name.lower()
         print('Saving ' + name)
@@ -172,6 +152,8 @@ class FacebookEventSpider(scrapy.Spider):
 
 
 def getPages():
+    if runningLocally:
+        return ['AttacNorge', 'UngdommotEU']
     client = storage.Client()
     bucket = client.bucket('fb-events2')
 
