@@ -1,18 +1,22 @@
+# coding=utf-8
+runningLocally = True
+
 import re
 import scrapy
+import scrapy.crawler as crawler
+if runningLocally == False:
+    from google.cloud import storage
 import time
 import json
-import scrapy.crawler as crawler
 from bs4 import BeautifulSoup
 from collections import OrderedDict
 from urllib.parse import urlencode, urljoin
 from multiprocessing import Process
 from twisted.internet import reactor
 from twisted.internet import error
-#from google.cloud import storage
 from scrapy.crawler import CrawlerRunner
+#
 
-runningLocally = True
 
 class FacebookEvent(scrapy.Item):
     date = scrapy.Field()
