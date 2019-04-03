@@ -63,7 +63,29 @@ class FacebookEventSpider(scrapy.Spider):
 
     def _get_fb_event_links(self, response):
         html_resp_unicode_decoded = response.body.decode('unicode_escape').replace('\\/', '/')
-        print(html_resp_unicode_decoded)
+        html_resp_unicode_decoded = html_resp_unicode_decoded.replace('</div>', '')
+        html_resp_unicode_decoded = html_resp_unicode_decoded.replace('</span>', '')
+        html_resp_unicode_decoded = re.sub('class' + r'[=S+">]', '', html_resp_unicode_decoded)
+        html_resp_unicode_decoded = re.sub('"_' + r'[S+"]', '', html_resp_unicode_decoded)
+        html_resp_unicode_decoded = html_resp_unicode_decoded.replace('<div "_55ws _5cqg _5cqi" data-sigil="touchable">', '')
+        html_resp_unicode_decoded = html_resp_unicode_decoded.replace('<div "_2x2s">', '')
+        html_resp_unicode_decoded = html_resp_unicode_decoded.replace(' "_592p _r-i">', '')
+        html_resp_unicode_decoded = html_resp_unicode_decoded.replace('<span "_5cqh"><span "_1e38 _2-xr _1mxf"><span "_1e39">', '')
+        html_resp_unicode_decoded = html_resp_unicode_decoded.replace('<span "_5cqh"><span "_1e38 _2-xr"><span "_1e39">', '')
+        html_resp_unicode_decoded = html_resp_unicode_decoded.replace('"replaceifexists":false,"allownull":false},{"cmd":"append","target":"static_templates","html":"","replaceifexists":true}],"contentless_response":false,"displayResources":["2AFaL","UgwR5","JMYLN"],"bootloadable":{},"ixData":{},"bxData":{},"gkxData":{},"qexData":{},"resource_map":{"2AFaL":{"type":"css","src":"https://static.xx.fbcdn.net/rsrc.php/v3/yQ/l/0,cross/ufL1xS4QjEK.css"},"UgwR5":{"type":"css","src":"https://static.xx.fbcdn.net/rsrc.php/v3/y5/l/0,cross/x7Uw6MfjJNG.css"},"JMYLN":{"type":"css","src":"https://static.xx.fbcdn.net/rsrc.php/v3/yb/l/0,cross/uWfXfDT81zH.css"}}}}', '')
+        html_resp_unicode_decoded = html_resp_unicode_decoded.replace('<div "_52jc _5d19"><span "_592p"><span title="', '<del>')
+        html_resp_unicode_decoded = html_resp_unicode_decoded.replace('<span "_1e3a">', '<del>')
+        html_resp_unicode_decoded = html_resp_unicode_decoded.replace('<div "_52jc _5d19"><span "_592p">','<del>')
+        html_resp_unicode_decoded = html_resp_unicode_decoded.replace('div "_2k4b"><div>', '')
+        html_resp_unicode_decoded = html_resp_unicode_decoded.replace('"_5379" ', '')
+        html_resp_unicode_decoded = re.sub('aria-label="View event details for' + r'[.]', '', html_resp_unicode_decoded)
+        html_resp_unicode_decoded = html_resp_unicode_decoded.replace('</h1>', '<del>')
+        html_resp_unicode_decoded = html_resp_unicode_decoded.replace('",', '')
+        html_resp_unicode_decoded = html_resp_unicode_decoded.replace('<<', '<')
+        splitted = html_resp_unicode_decoded.split("<h1")
+        splitted.pop(0)
+    
+        print(splitted)
 
         def get_see_more_id():
             # Get the next see more id
