@@ -8,7 +8,6 @@ if runningLocally == False:
     from google.cloud import storage
 import time
 import json
-from bs4 import BeautifulSoup
 from collections import OrderedDict
 from urllib.parse import urlencode, urljoin
 from multiprocessing import Process
@@ -16,15 +15,6 @@ from twisted.internet import reactor
 from twisted.internet import error
 from scrapy.crawler import CrawlerRunner
 #
-
-
-class FacebookEvent(scrapy.Item):
-    date = scrapy.Field()
-    summary_date = scrapy.Field()
-    summary_place = scrapy.Field()
-    title = scrapy.Field()
-    username = scrapy.Field()
-    url = scrapy.Field()
 
 class FacebookEventSpider(scrapy.Spider):
     name = 'facebook_event'
@@ -87,54 +77,8 @@ class FacebookEventSpider(scrapy.Spider):
     
         print(splitted)
 
-        def get_see_more_id():
-            # Get the next see more id
-            see_more_id_regex = re.compile(r'see_more_id=(\w+)&')
-            see_more_id_search = re.search(see_more_id_regex,
-                                           html_resp_unicode_decoded)
-            if see_more_id_search:
-                return see_more_id_search.group(1)
-            return None
-
-        def get_serialized_cursor():
-            # Get the next serialized_cursor
-            serialized_cursor_regex = re.compile(r'serialized_cursor=([\w-]+)')
-            serialized_cursor_search = re.search(serialized_cursor_regex,
-                                                 html_resp_unicode_decoded)
-            if serialized_cursor_search:
-                return serialized_cursor_search.group(1)
-            return None
-
-    def _parse_event(self, html_str):
-        soup = BeautifulSoup(html_str, 'html.parser')
-
-        def get_event_summary():
-            # Return an array containing two elements,
-            # the first element is the date of the event,
-            # the second element is the place of the event.
-            summaries = soup.find_all('div', class_='fbEventInfoText')
-
-            date_and_place_list = [element.get_text(' ') for element in
-                                   summaries]
-            # All events should have a date, but it's not necessary
-            # to have a place, sometimes there's an event that doesn't
-            # have a place.
-            if len(date_and_place_list) != 2:
-                date_and_place_list.append(None)
-            return date_and_place_list
-
-        def get_event_title():
-            return soup.select('title')[0].get_text()
-
-        fevent = FacebookEvent()
-        fevent['username'] = self.target_username
-        fevent['url'] = response.url
-        fevent['summary_date'], fevent['summary_place'] = get_event_summary()
-        fevent['title'] = get_event_title()
-        print(fevent['title'])
-        self.writeEventToFile(response, fevent)
-        return fevent
-
+        for event in splitted:
+            self.writeEventToFile(self, '123', event)
 
     def upload_blob(self, bucket_name, blob_text, destination_blob_name):
         """Uploads a file to the bucket."""
