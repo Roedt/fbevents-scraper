@@ -86,7 +86,7 @@ class FacebookEventSpider(scrapy.Spider):
             event['city'] = ''
             event['url'] = splitted[5]
         
-        event['url'] = event['url'].replace('<a href="/events/', '').replace('" ', '')
+        event['url'] = event['url'].replace('<a href="/events/', '').replace('"', '').strip()
         return event
 
     def _get_fb_event_links(self, response):
