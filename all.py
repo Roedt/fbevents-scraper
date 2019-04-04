@@ -14,7 +14,6 @@ from multiprocessing import Process
 from twisted.internet import reactor
 from twisted.internet import error
 from scrapy.crawler import CrawlerRunner
-#
 
 class FacebookEventSpider(scrapy.Spider):
     name = 'facebook_event'
@@ -86,6 +85,8 @@ class FacebookEventSpider(scrapy.Spider):
         else:
             event['city'] = ''
             event['url'] = splitted[5]
+        
+        event['url'] = event['url'].replace('<a href="/events/', '').replace('" ', '')
         return event
 
     def _get_fb_event_links(self, response):
@@ -112,7 +113,6 @@ class FacebookEventSpider(scrapy.Spider):
             json.dump(fevent, outfile, ensure_ascii=False)
 
     def writeEventToFile(self, fevent):
-        fevent['url'] = fevent['url'].replace('<a href="/events/', '').replace('" ', '')
         name = self.target_username +"_" + fevent['url'] + '.json'
         if (runningLocally):
             self.saveToLocalFile(name, fevent)
