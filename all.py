@@ -8,23 +8,12 @@ if runningLocally == False:
     from google.cloud import storage
 import time
 import json
-from bs4 import BeautifulSoup
 from collections import OrderedDict
 from urllib.parse import urlencode, urljoin
 from multiprocessing import Process
 from twisted.internet import reactor
 from twisted.internet import error
 from scrapy.crawler import CrawlerRunner
-#
-
-
-class FacebookEvent(scrapy.Item):
-    date = scrapy.Field()
-    summary_date = scrapy.Field()
-    summary_place = scrapy.Field()
-    title = scrapy.Field()
-    username = scrapy.Field()
-    url = scrapy.Field()
 
 class FacebookEventSpider(scrapy.Spider):
     name = 'facebook_event'
@@ -61,78 +50,52 @@ class FacebookEventSpider(scrapy.Spider):
                                                             'u_0_d'),
                               callback=self._get_fb_event_links)
 
+    def trimAwayClutter(self, body):
+        html_resp_unicode_decoded = body.replace('\/', '/')
+        html_resp_unicode_decoded = re.sub('<div' + r'.*?>', '<del>', html_resp_unicode_decoded)
+        html_resp_unicode_decoded = re.sub('<span' + r'.*?>', '<del>', html_resp_unicode_decoded)
+        html_resp_unicode_decoded = re.sub('aria-label' + r'.*?>', '<del>', html_resp_unicode_decoded)
+        html_resp_unicode_decoded = html_resp_unicode_decoded.split('"replaceifexists"', 1)[0]
+
+        html_resp_unicode_decoded = html_resp_unicode_decoded.replace('</div>', '')
+        html_resp_unicode_decoded = html_resp_unicode_decoded.replace('</span>', '')
+        html_resp_unicode_decoded = re.sub('aria-label="View event details for' + r'[.]', '', html_resp_unicode_decoded)
+        html_resp_unicode_decoded = html_resp_unicode_decoded.replace('</h1>', '<del>')
+        
+        html_resp_unicode_decoded = html_resp_unicode_decoded.replace('<del><del><del><del>', '<del>')
+        html_resp_unicode_decoded = html_resp_unicode_decoded.replace('<del><del><del>', '<del>')
+        html_resp_unicode_decoded = html_resp_unicode_decoded.replace('<del><del>', '<del>')
+        html_resp_unicode_decoded = re.sub('for \(\;' + r'.*?' + 'html":"', '', html_resp_unicode_decoded)
+        html_resp_unicode_decoded = re.sub('<h1 class=' + r'.*?>', '<h1>', html_resp_unicode_decoded)
+        html_resp_unicode_decoded = re.sub('<a class="_' + r'[0-9]+' + '"', '<a', html_resp_unicode_decoded)
+        html_resp_unicode_decoded = re.sub('\?acontext=' + r'.*?' + 'aref=0', '', html_resp_unicode_decoded)
+        return html_resp_unicode_decoded
+
+    def formatAsEvent(self, eventIn):
+        event = {}
+        splitted = eventIn.split('<del>')
+        event['title'] = splitted[0]
+        event['month'] = splitted[1]
+        event['dayOfMonth'] = splitted[2]
+        event['time'] = splitted[3]
+        event['location'] = splitted[4]
+        if not splitted[5].startswith("<a href"):
+            event['city'] = splitted[5]
+            event['url'] = splitted[6]
+        else:
+            event['city'] = ''
+            event['url'] = splitted[5]
+        
+        event['url'] = event['url'].replace('<a href="/events/', '').replace('" ', '')
+        return event
+
     def _get_fb_event_links(self, response):
-        html_resp_unicode_decoded = str(
-            response.body.decode('unicode_escape')).replace('\\', '')
+        html_resp_unicode_decoded = self.trimAwayClutter(response.body.decode('unicode_escape'))
+        splitted = html_resp_unicode_decoded.split('<h1>')    
+        splitted.pop(0)
 
-        def get_see_more_id():
-            # Get the next see more id
-            see_more_id_regex = re.compile(r'see_more_id=(\w+)&')
-            see_more_id_search = re.search(see_more_id_regex,
-                                           html_resp_unicode_decoded)
-            if see_more_id_search:
-                return see_more_id_search.group(1)
-            return None
-
-        def get_serialized_cursor():
-            # Get the next serialized_cursor
-            serialized_cursor_regex = re.compile(r'serialized_cursor=([\w-]+)')
-            serialized_cursor_search = re.search(serialized_cursor_regex,
-                                                 html_resp_unicode_decoded)
-            if serialized_cursor_search:
-                return serialized_cursor_search.group(1)
-            return None
-
-        # Extract event urls from fb event ajax response.
-        event_url_regex = re.compile(r'href=\"(/events/\d+)')
-        event_urls = set(
-            re.findall(event_url_regex, html_resp_unicode_decoded)
-        )
-        for event_url in event_urls:
-            yield scrapy.Request(urljoin(self.top_url, event_url),
-                                 callback=self._parse_event)
-
-        # Check if there are `serialized_cursor` and `see_more_id` attached in
-        # the ajax response.
-        next_serialized_cursor = get_serialized_cursor()
-        next_see_more_id = get_see_more_id()
-        if next_serialized_cursor and next_see_more_id:
-            yield scrapy.Request(self.create_fb_event_ajax_url(
-                self.fb_page_id,
-                next_serialized_cursor,
-                next_see_more_id),
-                callback=self._get_fb_event_links)
-
-    def _parse_event(self, response):
-        html_str = str(response.body)
-        soup = BeautifulSoup(html_str, 'html.parser')
-
-        def get_event_summary():
-            # Return an array containing two elements,
-            # the first element is the date of the event,
-            # the second element is the place of the event.
-            summaries = soup.find_all('div', class_='fbEventInfoText')
-
-            date_and_place_list = [element.get_text(' ') for element in
-                                   summaries]
-            # All events should have a date, but it's not necessary
-            # to have a place, sometimes there's an event that doesn't
-            # have a place.
-            if len(date_and_place_list) != 2:
-                date_and_place_list.append(None)
-            return date_and_place_list
-
-        def get_event_title():
-            return soup.select('title')[0].get_text()
-
-        fevent = FacebookEvent()
-        fevent['username'] = self.target_username
-        fevent['url'] = response.url
-        fevent['summary_date'], fevent['summary_place'] = get_event_summary()
-        fevent['title'] = get_event_title()
-        self.writeEventToFile(response, fevent)
-        return fevent
-
+        for event in splitted:
+            self.writeEventToFile(self.formatAsEvent(event))
 
     def upload_blob(self, bucket_name, blob_text, destination_blob_name):
         """Uploads a file to the bucket."""
@@ -145,14 +108,12 @@ class FacebookEventSpider(scrapy.Spider):
         print('File uploaded to {}.'.format(destination_blob_name))
 
     def saveToLocalFile(self, name, fevent):
-        with open('events/' + name, 'w') as outfile:
-            json.dump(fevent.__dict__, outfile)
+        print(fevent)
+        with open('events/' + name, 'w', encoding='utf-8') as outfile:
+            json.dump(fevent, outfile, ensure_ascii=False)
 
-    def writeEventToFile(self, response, fevent):
-        url = response.url.replace('https://m.facebook.com/events/', '')
-        name = self.target_username +"_" + url + '.json'
-        name = name.lower()
-        print('Saving ' + name)
+    def writeEventToFile(self, fevent):
+        name = self.target_username +"_" + fevent['url'] + '.json'
         if (runningLocally):
             self.saveToLocalFile(name, fevent)
         else:
@@ -172,6 +133,8 @@ class FacebookEventSpider(scrapy.Spider):
 
 
 def getPages():
+    if runningLocally:
+        return ['AttacNorge', 'UngdommotEU']
     client = storage.Client()
     bucket = client.bucket('fb-events2')
 
