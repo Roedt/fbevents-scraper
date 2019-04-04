@@ -51,34 +51,50 @@ class FacebookEventSpider(scrapy.Spider):
                                                             'u_0_d'),
                               callback=self._get_fb_event_links)
 
-    def _get_fb_event_links(self, response):
-        html_resp_unicode_decoded = response.body.decode('unicode_escape').replace('\\/', '/')
+    def trimAwayClutter(self, body):
+        html_resp_unicode_decoded = body.replace('\/', '/')
+        html_resp_unicode_decoded = re.sub('<div' + r'.*?>', '<del>', html_resp_unicode_decoded)
+        html_resp_unicode_decoded = re.sub('<span' + r'.*?>', '<del>', html_resp_unicode_decoded)
+        html_resp_unicode_decoded = re.sub('aria-label' + r'.*?>', '<del>', html_resp_unicode_decoded)
+        html_resp_unicode_decoded = html_resp_unicode_decoded.split('"replaceifexists"', 1)[0]
+
         html_resp_unicode_decoded = html_resp_unicode_decoded.replace('</div>', '')
         html_resp_unicode_decoded = html_resp_unicode_decoded.replace('</span>', '')
-        html_resp_unicode_decoded = re.sub('class' + r'[=S+">]', '', html_resp_unicode_decoded)
-        html_resp_unicode_decoded = re.sub('"_' + r'[S+"]', '', html_resp_unicode_decoded)
-        html_resp_unicode_decoded = html_resp_unicode_decoded.replace('<div "_55ws _5cqg _5cqi" data-sigil="touchable">', '')
-        html_resp_unicode_decoded = html_resp_unicode_decoded.replace('<div "_2x2s">', '')
-        html_resp_unicode_decoded = html_resp_unicode_decoded.replace(' "_592p _r-i">', '')
-        html_resp_unicode_decoded = html_resp_unicode_decoded.replace('<span "_5cqh"><span "_1e38 _2-xr _1mxf"><span "_1e39">', '')
-        html_resp_unicode_decoded = html_resp_unicode_decoded.replace('<span "_5cqh"><span "_1e38 _2-xr"><span "_1e39">', '')
-        html_resp_unicode_decoded = html_resp_unicode_decoded.replace('"replaceifexists":false,"allownull":false},{"cmd":"append","target":"static_templates","html":"","replaceifexists":true}],"contentless_response":false,"displayResources":["2AFaL","UgwR5","JMYLN"],"bootloadable":{},"ixData":{},"bxData":{},"gkxData":{},"qexData":{},"resource_map":{"2AFaL":{"type":"css","src":"https://static.xx.fbcdn.net/rsrc.php/v3/yQ/l/0,cross/ufL1xS4QjEK.css"},"UgwR5":{"type":"css","src":"https://static.xx.fbcdn.net/rsrc.php/v3/y5/l/0,cross/x7Uw6MfjJNG.css"},"JMYLN":{"type":"css","src":"https://static.xx.fbcdn.net/rsrc.php/v3/yb/l/0,cross/uWfXfDT81zH.css"}}}}', '')
-        html_resp_unicode_decoded = html_resp_unicode_decoded.replace('<div "_52jc _5d19"><span "_592p"><span title="', '<del>')
-        html_resp_unicode_decoded = html_resp_unicode_decoded.replace('<span "_1e3a">', '<del>')
-        html_resp_unicode_decoded = html_resp_unicode_decoded.replace('<div "_52jc _5d19"><span "_592p">','<del>')
-        html_resp_unicode_decoded = html_resp_unicode_decoded.replace('div "_2k4b"><div>', '')
-        html_resp_unicode_decoded = html_resp_unicode_decoded.replace('"_5379" ', '')
         html_resp_unicode_decoded = re.sub('aria-label="View event details for' + r'[.]', '', html_resp_unicode_decoded)
         html_resp_unicode_decoded = html_resp_unicode_decoded.replace('</h1>', '<del>')
-        html_resp_unicode_decoded = html_resp_unicode_decoded.replace('",', '')
-        html_resp_unicode_decoded = html_resp_unicode_decoded.replace('<<', '<')
-        splitted = html_resp_unicode_decoded.split("<h1")
+        
+        html_resp_unicode_decoded = html_resp_unicode_decoded.replace('<del><del><del><del>', '<del>')
+        html_resp_unicode_decoded = html_resp_unicode_decoded.replace('<del><del><del>', '<del>')
+        html_resp_unicode_decoded = html_resp_unicode_decoded.replace('<del><del>', '<del>')
+        html_resp_unicode_decoded = re.sub('for \(\;' + r'.*?' + 'html":"', '', html_resp_unicode_decoded)
+        html_resp_unicode_decoded = re.sub('<h1 class=' + r'.*?>', '<h1>', html_resp_unicode_decoded)
+        html_resp_unicode_decoded = re.sub('<a class="_' + r'[0-9]+' + '"', '<a', html_resp_unicode_decoded)
+        html_resp_unicode_decoded = re.sub('\?acontext=' + r'.*?' + 'aref=0', '', html_resp_unicode_decoded)
+        return html_resp_unicode_decoded
+
+    def formatAsEvent(self, eventIn):
+        event = {}
+        splitted = eventIn.split('<del>')
+        event['title'] = splitted[0]
+        event['month'] = splitted[1]
+        event['dayOfMonth'] = splitted[2]
+        event['time'] = splitted[3]
+        event['location'] = splitted[4]
+        if not splitted[5].startswith("<a href"):
+            event['city'] = splitted[5]
+            event['url'] = splitted[6]
+        else:
+            event['city'] = ''
+            event['url'] = splitted[5]
+        return event
+
+    def _get_fb_event_links(self, response):
+        html_resp_unicode_decoded = self.trimAwayClutter(response.body.decode('unicode_escape'))
+        splitted = html_resp_unicode_decoded.split('<h1>')    
         splitted.pop(0)
-    
-        print(splitted)
 
         for event in splitted:
-            self.writeEventToFile(self, '123', event)
+            self.writeEventToFile(self.formatAsEvent(event))
 
     def upload_blob(self, bucket_name, blob_text, destination_blob_name):
         """Uploads a file to the bucket."""
@@ -91,14 +107,13 @@ class FacebookEventSpider(scrapy.Spider):
         print('File uploaded to {}.'.format(destination_blob_name))
 
     def saveToLocalFile(self, name, fevent):
-        with open('events/' + name, 'w') as outfile:
-            json.dump(fevent.__dict__, outfile)
+        print(fevent)
+        with open('events/' + name, 'w', encoding='utf-8') as outfile:
+            json.dump(fevent, outfile, ensure_ascii=False)
 
-    def writeEventToFile(self, urlIn, fevent):
-        url = urlIn.replace('https://m.facebook.com/events/', '')
-        name = self.target_username +"_" + url + '.json'
-        name = name.lower()
-        print('Saving ' + name)
+    def writeEventToFile(self, fevent):
+        fevent['url'] = fevent['url'].replace('<a href="/events/', '').replace('" ', '')
+        name = self.target_username +"_" + fevent['url'] + '.json'
         if (runningLocally):
             self.saveToLocalFile(name, fevent)
         else:
