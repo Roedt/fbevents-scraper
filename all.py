@@ -1,5 +1,5 @@
 # coding=utf-8
-runningLocally = True
+runningLocally = False
 
 import re
 import scrapy
@@ -117,7 +117,7 @@ class FacebookEventSpider(scrapy.Spider):
         if (runningLocally):
             self.saveToLocalFile(name, fevent)
         else:
-            self.upload_blob('fb-events2', json.dumps(fevent.__dict__), name)
+            self.upload_blob('fb-events2', json.dumps(fevent, ensure_ascii=False), 'events/' + name)
 
     @staticmethod
     def create_fb_event_ajax_url(page_id, serialized_cursor, see_more_id):
@@ -153,8 +153,8 @@ def fetch():
     d.addBoth(lambda _: reactor.stop())
     reactor.run()
 
-def run(d, f):
+def run(d):
     fetch()
 
 if runningLocally:
-    run(None, None)
+    run(None)
