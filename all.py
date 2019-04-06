@@ -1,19 +1,14 @@
 # coding=utf-8
-runningLocally = True
+runningLocally = False
 
 import re
-import scrapy
+import scrapy.http.request
+import scrapy.spiders
 import scrapy.crawler as crawler
 if runningLocally == False:
     from google.cloud import storage
-import time
 import json
-from collections import OrderedDict
-from urllib.parse import urlencode, urljoin
-from multiprocessing import Process
 from twisted.internet import reactor
-from twisted.internet import error
-from scrapy.crawler import CrawlerRunner
 
 class FacebookEventSpider(scrapy.Spider):
     name = 'facebook_event'
@@ -156,8 +151,8 @@ def fetch():
     d.addBoth(lambda _: reactor.stop())
     reactor.run()
 
-def run(d):
+def run(d, f):
     fetch()
 
 if runningLocally:
-    run(None)
+    run(None, None)
