@@ -5,6 +5,8 @@ import re
 import scrapy.http.request
 import scrapy.spiders
 import scrapy.crawler as crawler
+from collections import OrderedDict
+from urllib.parse import urlencode, urljoin
 if runningLocally == False:
     from google.cloud import storage
 import json
