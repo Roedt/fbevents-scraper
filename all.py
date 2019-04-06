@@ -79,6 +79,12 @@ class FacebookEventSpider(scrapy.Spider):
         trimmed = trimmed.replace('<del><del>', '')
         return trimmed
 
+    def parseAddressToPostnumber(self, address):
+        parsed = re.search('\d{4}', address)
+        if (parsed):
+            return parsed.group(0)
+        return ''
+
     def parseSingleEvent(self, response):
         try:
             self.parseSingleEventInner(response)
@@ -109,6 +115,8 @@ class FacebookEventSpider(scrapy.Spider):
             parsedEvent['address'] = fullLocation[1]
         else:
             parsedEvent['address'] = ''
+        parsedEvent['postnumber'] = self.parseAddressToPostnumber(parsedEvent['address'])
+
         parsedEvent['host'] = self.target_username
         self.writeEventToFile(parsedEvent)
 
