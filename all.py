@@ -1,5 +1,5 @@
 # coding=utf-8
-runningLocally = False
+runningLocally = True
 
 import re
 import scrapy
@@ -74,6 +74,7 @@ class FacebookEventSpider(scrapy.Spider):
     def formatAsEvent(self, eventIn):
         event = {}
         splitted = eventIn.split('<del>')
+        event['host'] = self.target_username
         event['title'] = splitted[0]
         event['month'] = splitted[1]
         event['dayOfMonth'] = splitted[2]
@@ -93,9 +94,12 @@ class FacebookEventSpider(scrapy.Spider):
         html_resp_unicode_decoded = self.trimAwayClutter(response.body.decode('unicode_escape'))
         splitted = html_resp_unicode_decoded.split('<h1>')    
         splitted.pop(0)
+        events = []
 
         for event in splitted:
-            self.writeEventToFile(self.formatAsEvent(event))
+            events.append(self.formatAsEvent(event));
+
+        self.writeEventToFile(events)
 
     def upload_blob(self, bucket_name, blob_text, destination_blob_name):
         """Uploads a file to the bucket."""
@@ -107,17 +111,16 @@ class FacebookEventSpider(scrapy.Spider):
 
         print('File uploaded to {}.'.format(destination_blob_name))
 
-    def saveToLocalFile(self, name, fevent):
-        print(fevent)
+    def saveToLocalFile(self, name, events):
         with open('events/' + name, 'w', encoding='utf-8') as outfile:
-            json.dump(fevent, outfile, ensure_ascii=False)
+            json.dump(events, outfile, ensure_ascii=False)
 
-    def writeEventToFile(self, fevent):
-        name = self.target_username +"_" + fevent['url'] + '.json'
+    def writeEventToFile(self, events):
+        name = self.target_username + '.json'
         if (runningLocally):
-            self.saveToLocalFile(name, fevent)
+            self.saveToLocalFile(name, events)
         else:
-            self.upload_blob('fb-events2', json.dumps(fevent, ensure_ascii=False), 'events/' + name)
+            self.upload_blob('fb-events2', json.dumps(events, ensure_ascii=False), 'events/' + name)
 
     @staticmethod
     def create_fb_event_ajax_url(page_id, serialized_cursor, see_more_id):
