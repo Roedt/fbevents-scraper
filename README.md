@@ -5,8 +5,8 @@ This code fetches events from a defined list of Facebook pages, using the scrapi
 
 It fetches the information available from the general events list for a page, which is currently the title, date, place and URL, in addition to the page ID.
 
-Combine this with [fbevents-api](https://github.com/madsop/fbevents-api) and [functions-cron](https://github.com/FirebaseExtended/functions-cron) to get the full pipeline:
+Combine this with [functions-cron](https://github.com/FirebaseExtended/functions-cron) to get the full pipeline:
 
 - fetch the events from facebook and save them to file with this app
 - schedule runs of this app via the functions-cron
-- use fbevents-api to retrieve the events afterwards
+- details about the events are saved to cloud storage, retrieve them from there afterwards
