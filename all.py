@@ -1,6 +1,10 @@
 # coding=utf-8
-runningLocally = True
+runningLocally = False
 
+from os import getenv
+
+import pymysql
+from pymysql.err import OperationalError
 import re
 import scrapy.http.request
 import scrapy.spiders
@@ -116,8 +120,14 @@ class FacebookEventSpider(scrapy.Spider):
         else:
             parsedEvent['address'] = ''
         parsedEvent['postnumber'] = self.parseAddressToPostnumber(parsedEvent['address'])
+        if runningLocally == False:
+            if len(parsedEvent['postnumber']) > 0:
+                position = getPosition(parsedEvent['postnumber'])
+                parsedEvent['lat'] = position['lat']
+                parsedEvent['lon'] = position['lon']
 
         parsedEvent['host'] = self.target_username
+        
         self.writeEventToFile(parsedEvent)
 
     def formatAsEvent(self, eventIn):
@@ -167,7 +177,6 @@ class FacebookEventSpider(scrapy.Spider):
 
     def writeEventToFile(self, event):
         name = event['host'] + "_" + event['eventID'] + '.json'
-        print(name)
         if (runningLocally):
             self.saveToLocalFile(name, event)
         else:
@@ -206,6 +215,65 @@ def fetch():
     d = runner.join()
     d.addBoth(lambda _: reactor.stop())
     reactor.run()
+
+
+CONNECTION_NAME = getenv(
+  'INSTANCE_CONNECTION_NAME',
+  'facebookevents:europe-west1:postnummer')
+DB_USER = getenv('MYSQL_USER', 'read')
+DB_PASSWORD = getenv('MYSQL_PASSWORD', 'AllowedToRead')
+DB_NAME = getenv('MYSQL_DATABASE', 'postnummer')
+
+mysql_config = {
+  'user': DB_USER,
+  'password': DB_PASSWORD,
+  'db': DB_NAME,
+  'charset': 'utf8mb4',
+  'cursorclass': pymysql.cursors.DictCursor,
+  'autocommit': True
+}
+
+# Create SQL connection globally to enable reuse
+# PyMySQL does not include support for connection pooling
+mysql_conn = None
+
+
+def __get_cursor():
+    """
+    Helper function to get a cursor
+      PyMySQL does NOT automatically reconnect,
+      so we must reconnect explicitly using ping()
+    """
+    try:
+        return mysql_conn.cursor()
+    except OperationalError:
+        mysql_conn.ping(reconnect=True)
+        return mysql_conn.cursor()
+
+def getPosition(postnumber):
+    global mysql_conn
+
+    # Initialize connections lazily, in case SQL access isn't needed for this
+    # GCF instance. Doing so minimizes the number of active SQL connections,
+    # which helps keep your GCF instances under SQL connection limits.
+    if not mysql_conn:
+        try:
+            mysql_conn = pymysql.connect(**mysql_config)
+        except OperationalError:
+            # If production settings fail, use local development ones
+            mysql_config['unix_socket'] = f'/cloudsql/{CONNECTION_NAME}'
+            mysql_conn = pymysql.connect(**mysql_config)
+
+    # Remember to close SQL resources declared while running this function.
+    # Keep any declared in global scope (e.g. mysql_conn) for later reuse.
+    with __get_cursor() as cursor:
+        cursor.execute('SELECT lat, lon from postnummer where postnr = ' + postnumber)
+        results = cursor.fetchone()
+        toReturn = {}
+        toReturn['lat'] = str(results['lat'])
+        toReturn['lon'] = str(results['lon'])
+        return toReturn
+
 
 def run(d, f):
     fetch()
