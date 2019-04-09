@@ -226,12 +226,18 @@ DB_USER = getenv('MYSQL_USER', 'read')
 DB_PASSWORD = getenv('MYSQL_PASSWORD', 'AllowedToRead')
 DB_NAME = getenv('MYSQL_DATABASE', 'postnummer')
 
+
+def _getCursorClass():
+    if runningLocally:
+        return ''
+    return pymysql.cursors.DictCursor
+
 mysql_config = {
   'user': DB_USER,
   'password': DB_PASSWORD,
   'db': DB_NAME,
   'charset': 'utf8mb4',
-  'cursorclass': pymysql.cursors.DictCursor,
+  'cursorclass': _getCursorClass(),
   'autocommit': True
 }
 
