@@ -3,8 +3,6 @@ runningLocally = False
 
 from os import getenv
 
-import pymysql
-from pymysql.err import OperationalError
 import re
 import scrapy.http.request
 import scrapy.spiders
@@ -13,6 +11,8 @@ from collections import OrderedDict
 from bs4 import BeautifulSoup
 from urllib.parse import urlencode, urljoin
 if runningLocally == False:
+    import PyMySQL
+    from pymysql.err import OperationalError
     from google.cloud import storage
 import json
 from twisted.internet import reactor
