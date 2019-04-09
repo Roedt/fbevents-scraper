@@ -32,14 +32,16 @@ class FacebookEventSpider(scrapy.Spider):
             raise Exception('`target_username` argument must be filled')
 
     def parse(self, response):
-        return scrapy.Request(
-            '{top_url}/{username}/events'.format(
+        try: 
+            url = '{top_url}/{username}/events/'.format(
                 top_url=self.top_url,
-                username=self.target_username),
+                    username=self.target_username)
+            return scrapy.Request(url,
             callback=self._get_facebook_events_ajax)
+        except Exception as e:
+            print(e)
 
     def _get_facebook_events_ajax(self, response):
-        # Get Facebook events ajax
         def get_fb_page_id():
             p = re.compile(r'page_id=(\d*)')
             search = re.search(p, str(response.body))
