@@ -122,6 +122,7 @@ class FacebookEventSpider(scrapy.Spider):
         else:
             parsedEvent['address'] = ''
         parsedEvent['postnumber'] = self.parseAddressToPostnumber(parsedEvent['address'])
+        if len(parsedEvent['postnumber']) == 0:
             parsedEvent['postnumber'] = self.parseAddressToPostnumber(parsedEvent['location'])
         if runningLocally == False:
             if len(parsedEvent['postnumber']) > 0:
