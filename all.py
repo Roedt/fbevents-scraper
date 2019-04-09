@@ -28,9 +28,6 @@ class FacebookEventSpider(scrapy.Spider):
     def __init__(self, page, *args, **kwargs):
         self.target_username = page
 
-        if not self.target_username:
-            raise Exception('`target_username` argument must be filled')
-
     def parse(self, response):
         try: 
             url = '{top_url}/{username}/events/'.format(
@@ -157,11 +154,9 @@ class FacebookEventSpider(scrapy.Spider):
         html_resp_unicode_decoded = self.trimAwayClutter(response.body.decode('unicode_escape'))
         splitted = html_resp_unicode_decoded.split('<h1>')    
         splitted.pop(0)
-        events = []
 
         for event in splitted:
             formattedEvent = self.formatAsEvent(event)
-            events.append(formattedEvent);
             url = urljoin(self.top_url, 'events/' + formattedEvent['url'])
             yield scrapy.Request(url, callback=self.parseSingleEvent, meta={'original': formattedEvent})
 
