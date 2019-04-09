@@ -11,7 +11,7 @@ from collections import OrderedDict
 from bs4 import BeautifulSoup
 from urllib.parse import urlencode, urljoin
 if runningLocally == False:
-    import PyMySQL
+    import pymysql
     from pymysql.err import OperationalError
     from google.cloud import storage
 import json
