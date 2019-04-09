@@ -219,7 +219,7 @@ def fetch():
 
 CONNECTION_NAME = getenv(
   'INSTANCE_CONNECTION_NAME',
-  'facebookevents:europe-west1:postnummer')
+  'facebookevents:europe-west1:postnumber')
 DB_USER = getenv('MYSQL_USER', 'read')
 DB_PASSWORD = getenv('MYSQL_PASSWORD', 'AllowedToRead')
 DB_NAME = getenv('MYSQL_DATABASE', 'postnummer')
