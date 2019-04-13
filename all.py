@@ -11,9 +11,8 @@ from collections import OrderedDict
 from bs4 import BeautifulSoup
 from urllib.parse import urlencode, urljoin
 if runningLocally == False:
-    import pymysql
-    from pymysql.err import OperationalError
     from google.cloud import storage
+    from datetime import datetime
 import json
 from twisted.internet import reactor
 
@@ -155,7 +154,7 @@ class FacebookEventSpider(scrapy.Spider):
         html_resp_unicode_decoded = self.trimAwayClutter(response.body.decode('unicode_escape'))
         splitted = html_resp_unicode_decoded.split('<h1>')    
         splitted.pop(0)
-
+        
         for event in splitted:
             formattedEvent = self.formatAsEvent(event)
             url = urljoin(self.top_url, 'events/' + formattedEvent['url'])
@@ -197,11 +196,17 @@ class FacebookEventSpider(scrapy.Spider):
 
 def getPages():
     if runningLocally:
-        return ['AttacNorge', 'UngdommotEU']
+        return ['RoedtSondreNordstrand']
+    now = int(datetime.now().strftime('%H'))
+    if now % 2 == 0:
+        pagelist = 'pages1.txt'
+    else:
+        pagelist = 'pages2.txt'
     client = storage.Client()
     bucket = client.bucket('fb-events2')
 
-    blob = bucket.get_blob('pages.txt')
+
+    blob = bucket.get_blob(pagelist)
     pages = str(blob.download_as_string())
     pages = pages.replace('b\'', '').replace('\'', '').split(",")
     return pages
