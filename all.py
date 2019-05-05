@@ -113,7 +113,8 @@ class FacebookEventSpider(scrapy.Spider):
         parsedEvent['eventID'] = re.sub('http' + r'.*?' + 'events/', '', parsedEvent['url'])
 
         time = self.trimSingleEvent(str(summaries[0])).split('<del>')
-        parsedEvent['time'] = time[0]
+        timeOfEvent = time[0].replace(' UTC+02', '').replace(' UTC+01', '').replace('â', '-')
+        parsedEvent['time'] = timeOfEvent
 
         fullLocation = self.trimSingleEvent(str(summaries[1])).split('<del>')
         parsedEvent['location'] = fullLocation[0]
