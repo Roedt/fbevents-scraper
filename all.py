@@ -206,10 +206,10 @@ def getPages():
     client = storage.Client()
     bucket = client.bucket('fb-events2')
 
-
     blob = bucket.get_blob(pagelist)
     pages = str(blob.download_as_string())
-    pages = pages.replace('b\'', '').replace('\'', '').split(",")
+    pages = pages.replace('b\'', '').replace('\'', '').split('\\n')
+
     return pages
 
 def fetch():
@@ -217,7 +217,8 @@ def fetch():
         'USER_AGENT': 'Mozilla/5.0 (Linux; U; Android 4.0.3; ko-kr; LG-L160L Build/IML74K) AppleWebkit/534.30 (KHTML, like Gecko) Version/4.0 Mobile Safari/534.30'
     })
     for page in getPages():
-        runner.crawl(FacebookEventSpider, page=page)
+        if page.strip():
+            runner.crawl(FacebookEventSpider, page=page)
     d = runner.join()
     d.addBoth(lambda _: reactor.stop())
     reactor.run()
