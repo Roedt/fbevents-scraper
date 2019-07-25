@@ -10,6 +10,3 @@ Combine this with [functions-cron](https://github.com/FirebaseExtended/functions
 - fetch the events from facebook and save them to file with this app
 - schedule runs of this app via the functions-cron
 - details about the events are saved to cloud storage, retrieve them from there afterwards
-
-
-The information about postal codes and their positions are collected and quality controlled by [Erik Bolstad](https://www.erikbolstad.no/postnummer-koordinatar/)
