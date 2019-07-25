@@ -12,8 +12,8 @@ from bs4 import BeautifulSoup
 from urllib.parse import urlencode, urljoin
 if runningLocally == False:
     from google.cloud import storage
-    from datetime import datetime
 import json
+from datetime import datetime
 from twisted.internet import reactor
 
 class FacebookEventSpider(scrapy.Spider):
@@ -118,7 +118,8 @@ class FacebookEventSpider(scrapy.Spider):
         timeOfEvent = timeOfEvent.replace(' â', ' -')
         timeOfEvent = timeOfEvent.replace(' at ', ' ').split(' - ')
         timeOfEvent[0] = timeOfEvent[0].replace(' Â·', '')
-        parsedEvent['starttime'] = timeOfEvent[0]
+        starttime = datetime.strptime(timeOfEvent[0], "%A, %B %d, %Y %I:%M %p")
+        parsedEvent['starttime'] = datetime.strftime(starttime, "%A %d %B kl %H.%M")
         if (len(timeOfEvent) > 1):
             timeOfEvent[1] = timeOfEvent[1].replace(' Â·', '')
             parsedEvent['endtime'] = timeOfEvent[1]
