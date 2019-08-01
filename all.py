@@ -108,23 +108,12 @@ class FacebookEventSpider(scrapy.Spider):
         parsedEvent['title'] = original['title']
         parsedEvent['month'] = original['month']
         parsedEvent['dayOfMonth'] = original['dayOfMonth']
-        parsedEvent['timeOfDay'] = original['time']
+        timeOfDay = original['time'].split(' UTC')[0]
+        timeOfDay = datetime.strptime(timeOfDay, '%I:%M %p')
+        timeOfDay = datetime.strftime(timeOfDay, '%H.%M')
+        parsedEvent['timeOfDay'] = timeOfDay
         parsedEvent['url'] = response.url
         parsedEvent['eventID'] = re.sub('http' + r'.*?' + 'events/', '', parsedEvent['url'])
-
-        time = self.trimSingleEvent(str(summaries[0])).split('<del>')
-
-        timeOfEvent = time[0].replace(' UTC+02', '').replace(' UTC+01', '').replace('â', '-')
-        timeOfEvent = timeOfEvent.replace(' â', ' -')
-        timeOfEvent = timeOfEvent.replace(' at ', ' ').split(' - ')
-        timeOfEvent[0] = timeOfEvent[0].replace(' Â·', '')
-        starttime = datetime.strptime(timeOfEvent[0], "%A, %B %d, %Y %I:%M %p")
-        parsedEvent['starttime'] = datetime.strftime(starttime, "%A %d %B kl %H.%M")
-        if (len(timeOfEvent) > 1):
-            timeOfEvent[1] = timeOfEvent[1].replace(' Â·', '')
-            parsedEvent['endtime'] = timeOfEvent[1]
-        else:
-            parsedEvent['endtime'] = ''
 
         fullLocation = self.trimSingleEvent(str(summaries[1])).split('<del>')
         parsedEvent['location'] = fullLocation[0]
