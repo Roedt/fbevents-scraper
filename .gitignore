@@ -9,9 +9,10 @@ __pycache__/
 events/*.json
 settings.json
 libs/
-pages.txt
-pages1.txt
-pages2.txt
+pages*.txt
+pages*.csv
+pages*.numbers
+postnummer-sql*
 
 # Distribution / packaging
 .Python
