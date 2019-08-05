@@ -25,7 +25,8 @@ class FacebookEventSpider(scrapy.Spider):
     top_url = 'https://m.facebook.com'
 
     def __init__(self, page, *args, **kwargs):
-        self.target_username = page
+        self.displayName = page[0]
+        self.target_username = page[2]
 
     def parse(self, response):
         try: 
@@ -127,14 +128,14 @@ class FacebookEventSpider(scrapy.Spider):
             parsedEvent['lat'] = positionFromMap['lat']
             parsedEvent['lon'] = positionFromMap['lon']
 
-        parsedEvent['host'] = self.target_username
+        parsedEvent['host'] = self.displayName
         
         self.writeEventToFile(parsedEvent)
 
     def formatAsEvent(self, eventIn):
         event = {}
         splitted = eventIn.split('<del>')
-        event['host'] = self.target_username
+        event['host'] = self.displayName
         event['title'] = splitted[0]
         event['month'] = splitted[1]
         event['dayOfMonth'] = splitted[2]
@@ -175,7 +176,7 @@ class FacebookEventSpider(scrapy.Spider):
             json.dump(event, outfile, ensure_ascii=False)
 
     def writeEventToFile(self, event):
-        name = event['host'] + "_" + event['eventID'] + '.json'
+        name = self.target_username + "_" + event['eventID'] + '.json'
         if (runningLocally):
             self.saveToLocalFile(name, event)
         else:
@@ -196,7 +197,11 @@ class FacebookEventSpider(scrapy.Spider):
 
 def getPages():
     if runningLocally:
-        return ['RoedtSondreNordstrand']
+        return [
+            ['Oslo Søndre Nordstrand, Rødt Oslo, RoedtSondreNordstrand'],
+            ['Oslo Skole og Barnehage,Rødt Oslo,'],
+            ['Rødt,,Roedt']
+        ]
     now = int(datetime.now().strftime('%H'))
     if now % 2 == 0:
         pagelist = 'pages1.txt'
@@ -208,7 +213,6 @@ def getPages():
     blob = bucket.get_blob(pagelist)
     pages = str(blob.download_as_string())
     pages = pages.replace('b\'', '').replace('\'', '').split('\\n')
-
     return pages
 
 def fetch():
@@ -216,8 +220,9 @@ def fetch():
         'USER_AGENT': 'Mozilla/5.0 (Linux; U; Android 4.0.3; ko-kr; LG-L160L Build/IML74K) AppleWebkit/534.30 (KHTML, like Gecko) Version/4.0 Mobile Safari/534.30'
     })
     for page in getPages():
-        if page.strip():
-            runner.crawl(FacebookEventSpider, page=page)
+        singlePage = page[0].split(',')
+        if len(singlePage) == 3 and singlePage[2].strip():
+            runner.crawl(FacebookEventSpider, page=singlePage)
     d = runner.join()
     d.addBoth(lambda _: reactor.stop())
     reactor.run()
