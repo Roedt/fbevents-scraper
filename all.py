@@ -25,8 +25,8 @@ class FacebookEventSpider(scrapy.Spider):
     top_url = 'https://m.facebook.com'
 
     def __init__(self, page, *args, **kwargs):
-        self.displayName = page[0]
-        self.target_username = page[2]
+        self.displayName = page[0].strip()
+        self.target_username = page[2].strip()
 
     def parse(self, response):
         try: 
@@ -198,21 +198,21 @@ class FacebookEventSpider(scrapy.Spider):
 def getPages():
     if runningLocally:
         return [
-            ['Oslo Søndre Nordstrand, Rødt Oslo, RoedtSondreNordstrand'],
-            ['Oslo Skole og Barnehage,Rødt Oslo,'],
-            ['Rødt,,Roedt']
+            'Oslo Søndre Nordstrand;Rødt Oslo; RoedtSondreNordstrand',
+            'Oslo Skole og Barnehage;Rødt Oslo;',
+            'Rødt;;Roedt'
         ]
     now = int(datetime.now().strftime('%H'))
     if now % 2 == 0:
-        pagelist = 'pages1.txt'
+        pagelist = 'pages3'
     else:
-        pagelist = 'pages2.txt'
+        pagelist = 'pages4'
     client = storage.Client()
     bucket = client.bucket('fb-events2')
 
-    blob = bucket.get_blob(pagelist)
-    pages = str(blob.download_as_string())
-    pages = pages.replace('b\'', '').replace('\'', '').split('\\n')
+    blob = bucket.get_blob(pagelist + '.txt')
+    pages = str(blob.download_as_string(), 'utf-8')
+    pages = pages.split('\r\n')
     return pages
 
 def fetch():
@@ -220,7 +220,8 @@ def fetch():
         'USER_AGENT': 'Mozilla/5.0 (Linux; U; Android 4.0.3; ko-kr; LG-L160L Build/IML74K) AppleWebkit/534.30 (KHTML, like Gecko) Version/4.0 Mobile Safari/534.30'
     })
     for page in getPages():
-        singlePage = page[0].split(',')
+        singlePage = page.split(';')
+        singlePage[0] = 'Rødt ' + singlePage[0]
         if len(singlePage) == 3 and singlePage[2].strip():
             runner.crawl(FacebookEventSpider, page=singlePage)
     d = runner.join()
