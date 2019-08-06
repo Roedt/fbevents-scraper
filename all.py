@@ -1,5 +1,5 @@
 # coding=utf-8
-runningLocally = False
+runningLocally = True
 
 from os import getenv
 
@@ -15,6 +15,39 @@ if runningLocally == False:
 import json
 from datetime import datetime
 from twisted.internet import reactor
+
+class ClutterTrimmer:
+    def trimAwayClutter(self, body):
+        text = body.replace('\/', '/')
+        text = re.sub('<div' + r'.*?>', '<del>', text)
+        text = re.sub('<span' + r'.*?>', '<del>', text)
+        text = re.sub('aria-label' + r'.*?>', '<del>', text)
+        text = text.split('"replaceifexists"', 1)[0]
+
+        text = text.replace('</div>', '')
+        text = text.replace('</span>', '')
+        text = re.sub('aria-label="View event details for' + r'[.]', '', text)
+        text = text.replace('</h1>', '<del>')
+        
+        text = text.replace('<del><del><del><del>', '<del>')
+        text = text.replace('<del><del><del>', '<del>')
+        text = text.replace('<del><del>', '<del>')
+        text = text.replace('<del><del>', '<del>')
+        text = re.sub('for \(\;' + r'.*?' + 'html":"', '', text)
+        text = re.sub('<h1 class=' + r'.*?>', '<h1>', text)
+        text = re.sub('<a class="_' + r'[0-9]+' + '"', '<a', text)
+        text = re.sub('\?acontext=' + r'.*?' + 'aref=0', '', text)
+        return text
+    
+    def trimSingleEvent(self, text):
+        trimmed = self.trimAwayClutter(text)
+        trimmed = trimmed.replace('<dt>', '')
+        trimmed = trimmed.replace('<dd>', '')
+        trimmed = re.sub('</' + '.*?>', '', trimmed)
+        trimmed = re.sub('<del>' + r'$', '', trimmed)
+        trimmed = trimmed.replace('<del><del>', '')
+        return trimmed
+
 
 class FacebookEventSpider(scrapy.Spider):
     name = 'facebook_event'
@@ -51,36 +84,6 @@ class FacebookEventSpider(scrapy.Spider):
                                                             'u_0_d'),
                               callback=self._get_fb_event_links)
 
-    def trimAwayClutter(self, body):
-        text = body.replace('\/', '/')
-        text = re.sub('<div' + r'.*?>', '<del>', text)
-        text = re.sub('<span' + r'.*?>', '<del>', text)
-        text = re.sub('aria-label' + r'.*?>', '<del>', text)
-        text = text.split('"replaceifexists"', 1)[0]
-
-        text = text.replace('</div>', '')
-        text = text.replace('</span>', '')
-        text = re.sub('aria-label="View event details for' + r'[.]', '', text)
-        text = text.replace('</h1>', '<del>')
-        
-        text = text.replace('<del><del><del><del>', '<del>')
-        text = text.replace('<del><del><del>', '<del>')
-        text = text.replace('<del><del>', '<del>')
-        text = text.replace('<del><del>', '<del>')
-        text = re.sub('for \(\;' + r'.*?' + 'html":"', '', text)
-        text = re.sub('<h1 class=' + r'.*?>', '<h1>', text)
-        text = re.sub('<a class="_' + r'[0-9]+' + '"', '<a', text)
-        text = re.sub('\?acontext=' + r'.*?' + 'aref=0', '', text)
-        return text
-    
-    def trimSingleEvent(self, text):
-        trimmed = self.trimAwayClutter(text)
-        trimmed = trimmed.replace('<dt>', '')
-        trimmed = trimmed.replace('<dd>', '')
-        trimmed = re.sub('</' + '.*?>', '', trimmed)
-        trimmed = re.sub('<del>' + r'$', '', trimmed)
-        trimmed = trimmed.replace('<del><del>', '')
-        return trimmed
 
     def parseSingleEvent(self, response):
         try:
@@ -116,7 +119,7 @@ class FacebookEventSpider(scrapy.Spider):
         parsedEvent['url'] = response.url
         parsedEvent['eventID'] = re.sub('http' + r'.*?' + 'events/', '', parsedEvent['url'])
 
-        fullLocation = self.trimSingleEvent(str(summaries[1])).split('<del>')
+        fullLocation = ClutterTrimmer().trimSingleEvent(str(summaries[1])).split('<del>')
         parsedEvent['location'] = fullLocation[0]
         if (len(fullLocation) == 2):
             parsedEvent['address'] = fullLocation[1]
@@ -152,7 +155,7 @@ class FacebookEventSpider(scrapy.Spider):
         return event
 
     def _get_fb_event_links(self, response):
-        html_resp_unicode_decoded = self.trimAwayClutter(response.body.decode('unicode_escape'))
+        html_resp_unicode_decoded = ClutterTrimmer().trimAwayClutter(response.body.decode('unicode_escape'))
         splitted = html_resp_unicode_decoded.split('<h1>')    
         splitted.pop(0)
         
