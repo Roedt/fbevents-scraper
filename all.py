@@ -156,12 +156,13 @@ class EventFactory:
 
 
 class FacebookEventSpider(scrapy.Spider):
+    fburl = 'https://m.facebook.com/'
     name = 'facebook_event'
     start_urls = (
-        'https://m.facebook.com/',
+        fburl,
     )
     allowed_domains = ['m.facebook.com']
-    top_url = 'https://m.facebook.com'
+    top_url = fburl
 
     def __init__(self, page, *args, **kwargs):
         self.displayName = page[0].strip()
