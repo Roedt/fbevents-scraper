@@ -48,6 +48,112 @@ class ClutterTrimmer:
         trimmed = trimmed.replace('<del><del>', '')
         return trimmed
 
+class EventPersister:
+    def __init__(self, target_username):
+        self.target_username = target_username
+
+    def upload_blob(self, bucket_name, blob_text, destination_blob_name):
+        """Uploads a file to the bucket."""
+        storage_client = storage.Client()
+        bucket = storage_client.get_bucket(bucket_name)
+        blob = bucket.blob(destination_blob_name)
+
+        blob.upload_from_string(blob_text)
+
+        print('File uploaded to {}.'.format(destination_blob_name))
+
+    def saveToLocalFile(self, name, event):
+        with open('events/' + name, 'w', encoding='utf-8') as outfile:
+            json.dump(event, outfile, ensure_ascii=False)
+
+    def writeEventToFile(self, event):
+        name = self.target_username + "_" + event['eventID'] + '.json'
+        if (runningLocally):
+            self.saveToLocalFile(name, event)
+        else:
+            self.upload_blob('fb-events2', json.dumps(event, ensure_ascii=False), 'events/' + name)
+
+class EventFactory:
+    def __init__(self, displayName, target_username):
+        print('toprint')
+        self.displayName = displayName
+        try:
+            self.eventPersister = EventPersister(target_username)
+        except Exception as e:
+            print(e)
+
+    def parseSingleEvent(self, response):
+        try:
+            self.parseSingleEventInner(response)
+        except Exception as e:
+            print(e)
+
+    def parseSingleEventInner(self, response):
+        html_str = response.body.decode('unicode-escape')
+        soup = BeautifulSoup(html_str, 'html.parser')
+
+        summaries = soup.find_all('div', class_='fbEventInfoText')
+
+        original = response.meta.get('original')
+        parsedEvent = {}
+        parsedEvent['title'] = original['title']
+        parsedEvent['month'] = original['month']
+        parsedEvent['dayOfMonth'] = original['dayOfMonth']
+        timeOfDay = original['time'].split(' UTC')[0]
+        timeOfDay = datetime.strptime(timeOfDay, '%I:%M %p')
+        timeOfDay = datetime.strftime(timeOfDay, '%H.%M')
+        parsedEvent['timeOfDay'] = timeOfDay
+        parsedEvent['url'] = response.url
+        parsedEvent['eventID'] = re.sub('http' + r'.*?' + 'events/', '', parsedEvent['url'])
+
+        fullLocation = ClutterTrimmer().trimSingleEvent(str(summaries[1])).split('<del>')
+        parsedEvent['location'] = fullLocation[0]
+        if (len(fullLocation) == 2):
+            parsedEvent['address'] = fullLocation[1]
+        else:
+            parsedEvent['address'] = ''
+
+        positionFromMap = self.getPositionFromMap(html_str)
+        if positionFromMap is not None:
+            parsedEvent['lat'] = positionFromMap['lat']
+            parsedEvent['lon'] = positionFromMap['lon']
+
+        parsedEvent['host'] = self.displayName
+        try:
+            self.eventPersister.writeEventToFile(parsedEvent)
+        except Exception as e:
+            print(e)
+
+    def formatAsEvent(self, eventIn):
+        event = {}
+        splitted = eventIn.split('<del>')
+        event['host'] = self.displayName
+        event['title'] = splitted[0]
+        event['month'] = splitted[1]
+        event['dayOfMonth'] = splitted[2]
+        event['time'] = splitted[3]
+        event['location'] = splitted[4]
+        if not splitted[5].startswith("<a href"):
+            event['city'] = splitted[5]
+            event['url'] = splitted[6]
+        else:
+            event['url'] = splitted[5]
+            event['city'] = ''
+        
+        event['url'] = event['url'].replace('<a href="/events/', '').replace('"', '').strip()
+        return event
+        
+    def getPositionFromMap(self, html):
+        try:
+            lmindex = html.index("26daddr%3D")
+            pos = html[lmindex+10:lmindex+45].split('%252C')
+            lat = pos[0]
+            lon = pos[1].split('%')[0]
+            return {"lat": lat, "lon": lon}
+        except ValueError as e:
+            return None
+
+
 
 class FacebookEventSpider(scrapy.Spider):
     name = 'facebook_event'
@@ -84,106 +190,20 @@ class FacebookEventSpider(scrapy.Spider):
                                                             'u_0_d'),
                               callback=self._get_fb_event_links)
 
-
-    def parseSingleEvent(self, response):
-        try:
-            self.parseSingleEventInner(response)
-        except Exception as e:
-            print(e)
-
-    def getPositionFromMap(self, html):
-        try:
-            lmindex = html.index("26daddr%3D")
-            pos = html[lmindex+10:lmindex+45].split('%252C')
-            lat = pos[0]
-            lon = pos[1].split('%')[0]
-            return {"lat": lat, "lon": lon}
-        except ValueError as e:
-            return None
-
-    def parseSingleEventInner(self, response):
-        html_str = response.body.decode('unicode-escape')
-        soup = BeautifulSoup(html_str, 'html.parser')
-
-        summaries = soup.find_all('div', class_='fbEventInfoText')
-
-        original = response.meta.get('original')
-        parsedEvent = {}
-        parsedEvent['title'] = original['title']
-        parsedEvent['month'] = original['month']
-        parsedEvent['dayOfMonth'] = original['dayOfMonth']
-        timeOfDay = original['time'].split(' UTC')[0]
-        timeOfDay = datetime.strptime(timeOfDay, '%I:%M %p')
-        timeOfDay = datetime.strftime(timeOfDay, '%H.%M')
-        parsedEvent['timeOfDay'] = timeOfDay
-        parsedEvent['url'] = response.url
-        parsedEvent['eventID'] = re.sub('http' + r'.*?' + 'events/', '', parsedEvent['url'])
-
-        fullLocation = ClutterTrimmer().trimSingleEvent(str(summaries[1])).split('<del>')
-        parsedEvent['location'] = fullLocation[0]
-        if (len(fullLocation) == 2):
-            parsedEvent['address'] = fullLocation[1]
-        else:
-            parsedEvent['address'] = ''
-
-        positionFromMap = self.getPositionFromMap(html_str)
-        if positionFromMap is not None:
-            parsedEvent['lat'] = positionFromMap['lat']
-            parsedEvent['lon'] = positionFromMap['lon']
-
-        parsedEvent['host'] = self.displayName
-        
-        self.writeEventToFile(parsedEvent)
-
-    def formatAsEvent(self, eventIn):
-        event = {}
-        splitted = eventIn.split('<del>')
-        event['host'] = self.displayName
-        event['title'] = splitted[0]
-        event['month'] = splitted[1]
-        event['dayOfMonth'] = splitted[2]
-        event['time'] = splitted[3]
-        event['location'] = splitted[4]
-        if not splitted[5].startswith("<a href"):
-            event['city'] = splitted[5]
-            event['url'] = splitted[6]
-        else:
-            event['url'] = splitted[5]
-            event['city'] = ''
-        
-        event['url'] = event['url'].replace('<a href="/events/', '').replace('"', '').strip()
-        return event
+    
 
     def _get_fb_event_links(self, response):
         html_resp_unicode_decoded = ClutterTrimmer().trimAwayClutter(response.body.decode('unicode_escape'))
-        splitted = html_resp_unicode_decoded.split('<h1>')    
-        splitted.pop(0)
+        eventsForThisPage = html_resp_unicode_decoded.split('<h1>')    
+        eventsForThisPage.pop(0)
+        if (not eventsForThisPage):
+            return 
+        eventFactory = EventFactory(self.displayName, self.target_username)
         
-        for event in splitted:
-            formattedEvent = self.formatAsEvent(event)
+        for event in eventsForThisPage:
+            formattedEvent = eventFactory.formatAsEvent(event)
             url = urljoin(self.top_url, 'events/' + formattedEvent['url'])
-            yield scrapy.Request(url, callback=self.parseSingleEvent, meta={'original': formattedEvent})
-
-    def upload_blob(self, bucket_name, blob_text, destination_blob_name):
-        """Uploads a file to the bucket."""
-        storage_client = storage.Client()
-        bucket = storage_client.get_bucket(bucket_name)
-        blob = bucket.blob(destination_blob_name)
-
-        blob.upload_from_string(blob_text)
-
-        print('File uploaded to {}.'.format(destination_blob_name))
-
-    def saveToLocalFile(self, name, event):
-        with open('events/' + name, 'w', encoding='utf-8') as outfile:
-            json.dump(event, outfile, ensure_ascii=False)
-
-    def writeEventToFile(self, event):
-        name = self.target_username + "_" + event['eventID'] + '.json'
-        if (runningLocally):
-            self.saveToLocalFile(name, event)
-        else:
-            self.upload_blob('fb-events2', json.dumps(event, ensure_ascii=False), 'events/' + name)
+            yield scrapy.Request(url, callback=eventFactory.parseSingleEvent, meta={'original': formattedEvent})
 
     @staticmethod
     def create_fb_event_ajax_url(page_id, serialized_cursor, see_more_id):
