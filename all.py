@@ -2,6 +2,8 @@
 runningLocally = True
 
 from os import getenv
+from os import path
+from os import makedirs
 
 import re
 import scrapy.http.request
@@ -52,7 +54,7 @@ class EventPersister:
     def __init__(self, target_username):
         self.target_username = target_username
 
-    def upload_blob(self, bucket_name, blob_text, destination_blob_name):
+    def __upload_blob(self, bucket_name, blob_text, destination_blob_name):
         """Uploads a file to the bucket."""
         storage_client = storage.Client()
         bucket = storage_client.get_bucket(bucket_name)
@@ -62,16 +64,23 @@ class EventPersister:
 
         print('File uploaded to {}.'.format(destination_blob_name))
 
-    def saveToLocalFile(self, name, event):
-        with open('events/' + name, 'w', encoding='utf-8') as outfile:
+    def __saveToLocalFile(self, name, event):
+        folder = self.__getFolder()
+        if not (path.exists(folder)):
+            makedirs(folder)
+        with open(folder + name, 'w', encoding='utf-8') as outfile:
             json.dump(event, outfile, ensure_ascii=False)
 
     def writeEventToFile(self, event):
         name = self.target_username + "_" + event['eventID'] + '.json'
         if (runningLocally):
-            self.saveToLocalFile(name, event)
+            self.__saveToLocalFile(name, event)
         else:
-            self.upload_blob('fb-events2', json.dumps(event, ensure_ascii=False), 'events/' + name)
+            self.__upload_blob('fb-events2', json.dumps(event, ensure_ascii=False), self.__getFolder() + name)
+
+    def __getFolder(self):
+        return 'events/' + datetime.today().strftime('%Y%m%d') +'/'
+
 
 class EventFactory:
     def __init__(self, displayName, target_username):
@@ -84,11 +93,11 @@ class EventFactory:
 
     def parseSingleEvent(self, response):
         try:
-            self.parseSingleEventInner(response)
+            self.__parseSingleEventInner(response)
         except Exception as e:
             print(e)
 
-    def parseSingleEventInner(self, response):
+    def __parseSingleEventInner(self, response):
         html_str = response.body.decode('unicode-escape')
         soup = BeautifulSoup(html_str, 'html.parser')
 
@@ -254,6 +263,9 @@ def fetch():
 
 def run(d, f):
     fetch()
+
+def runSingleParam(d):
+    run(d, None)
 
 if runningLocally:
     try:
