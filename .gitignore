@@ -6,7 +6,9 @@ __pycache__/
 # C extensions
 *.so
 
+.vscode/*
 events/*.json
+events/**
 settings.json
 libs/
 pages*.txt
