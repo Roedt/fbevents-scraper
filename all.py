@@ -5,6 +5,7 @@ from os import getenv
 from os import path
 from os import makedirs
 
+import pytz
 import re
 import scrapy.http.request
 import scrapy.spiders
@@ -79,12 +80,14 @@ class EventPersister:
             self.__upload_blob('fb-events2', json.dumps(event, ensure_ascii=False), self.__getFolder() + name)
 
     def __getFolder(self):
-        return 'events/' + datetime.today().strftime('%Y%m%d') +'/'
+        return 'events/' + self.__getToday().strftime('%Y%m%d') +'/'
+
+    def __getToday(self):
+        return datetime.now(pytz.timezone('Europe/Oslo'))
 
 
 class EventFactory:
     def __init__(self, displayName, target_username):
-        print('toprint')
         self.displayName = displayName
         try:
             self.eventPersister = EventPersister(target_username)
