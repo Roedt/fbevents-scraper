@@ -85,6 +85,48 @@ class EventPersister:
     def __getToday(self):
         return datetime.now(pytz.timezone('Europe/Oslo'))
 
+class Event:
+    def __init__(self, original, response, summaries, positionFromMap, displayName):
+        self.title = original['title']
+        self.month = original['month']
+        self.dayOfMonth = original['dayOfMonth']
+        timeOfDay = original['time'].split(' UTC')[0]
+        timeOfDay = datetime.strptime(timeOfDay, '%I:%M %p')
+        timeOfDay = datetime.strftime(timeOfDay, '%H.%M')
+        self.timeOfDay = timeOfDay
+        self.url = response.url
+        self.eventID = re.sub('http' + r'.*?' + 'events/', '', self.url)
+
+        fullLocation = ClutterTrimmer().trimSingleEvent(str(summaries[1])).split('<del>')
+        self.location = fullLocation[0]
+        if (len(fullLocation) == 2):
+            self.address = fullLocation[1]
+        else:
+            self.address = ''
+
+        if positionFromMap is not None:
+            self.lat = positionFromMap['lat']
+            self.lon = positionFromMap['lon']
+        else:
+            self.lat = None
+            self.lon = None
+
+        self.host = displayName
+
+    def toItem(self):
+        parsedEvent = {}
+        parsedEvent['title'] = self.title
+        parsedEvent['month'] = self.month
+        parsedEvent['timeOfDay'] = self.timeOfDay
+        parsedEvent['url'] = self.url
+        parsedEvent['eventID'] = self.eventID
+        parsedEvent['address'] = self.address
+        if self.lat:
+            parsedEvent['lat'] = self.lat
+        if self.lon:
+            parsedEvent['lon'] = self.lon
+        parsedEvent['host'] = self.host
+        return parsedEvent
 
 class EventFactory:
     def __init__(self, displayName, target_username):
@@ -107,32 +149,12 @@ class EventFactory:
         summaries = soup.find_all('div', class_='fbEventInfoText')
 
         original = response.meta.get('original')
-        parsedEvent = {}
-        parsedEvent['title'] = original['title']
-        parsedEvent['month'] = original['month']
-        parsedEvent['dayOfMonth'] = original['dayOfMonth']
-        timeOfDay = original['time'].split(' UTC')[0]
-        timeOfDay = datetime.strptime(timeOfDay, '%I:%M %p')
-        timeOfDay = datetime.strftime(timeOfDay, '%H.%M')
-        parsedEvent['timeOfDay'] = timeOfDay
-        parsedEvent['url'] = response.url
-        parsedEvent['eventID'] = re.sub('http' + r'.*?' + 'events/', '', parsedEvent['url'])
-
-        fullLocation = ClutterTrimmer().trimSingleEvent(str(summaries[1])).split('<del>')
-        parsedEvent['location'] = fullLocation[0]
-        if (len(fullLocation) == 2):
-            parsedEvent['address'] = fullLocation[1]
-        else:
-            parsedEvent['address'] = ''
-
         positionFromMap = self.getPositionFromMap(html_str)
-        if positionFromMap is not None:
-            parsedEvent['lat'] = positionFromMap['lat']
-            parsedEvent['lon'] = positionFromMap['lon']
+        parsedEvent = Event(original, response, summaries, positionFromMap, self.displayName)
+        event = parsedEvent.toItem()
 
-        parsedEvent['host'] = self.displayName
         try:
-            self.eventPersister.writeEventToFile(parsedEvent)
+            self.eventPersister.writeEventToFile(event)
         except Exception as e:
             print(e)
 
