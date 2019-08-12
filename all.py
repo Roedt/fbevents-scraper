@@ -73,14 +73,14 @@ class EventPersister:
             json.dump(event, outfile, ensure_ascii=False)
 
     def writeEventToFile(self, event):
-        name = self.target_username + "_" + event['eventID'] + '.json'
+        name = event['preciseTime'] + "_" + self.target_username + "_" + event['eventID'] + '.json'
         if (runningLocally):
             self.__saveToLocalFile(name, event)
         else:
             self.__upload_blob('fb-events2', json.dumps(event, ensure_ascii=False), self.__getFolder() + name)
 
     def __getFolder(self):
-        return 'events/' + self.__getToday().strftime('%Y%m%d') +'/'
+        return 'events/v2/' + self.__getToday().strftime('%Y%m%d') +'/'
 
     def __getToday(self):
         return datetime.now(pytz.timezone('Europe/Oslo'))
@@ -89,11 +89,12 @@ class Event:
     def __init__(self, original, response, summaries, positionFromMap, displayName):
         self.title = original['title']
         self.month = original['month']
-        self.dayOfMonth = original['dayOfMonth']
+        self.dayOfMonth = int(original['dayOfMonth'])
         timeOfDay = original['time'].split(' UTC')[0]
         timeOfDay = datetime.strptime(timeOfDay, '%I:%M %p')
-        timeOfDay = datetime.strftime(timeOfDay, '%H.%M')
-        self.timeOfDay = timeOfDay
+        hour = int(datetime.strftime(timeOfDay, '%H'))
+        minutes = int(datetime.strftime(timeOfDay, '%M'))
+        self.timeOfDay = str(hour) + '.' + str(minutes)
         self.url = response.url
         self.eventID = re.sub('http' + r'.*?' + 'events/', '', self.url)
 
@@ -112,11 +113,21 @@ class Event:
             self.lon = None
 
         self.host = displayName
+        self.preciseTime = self.__getTimeOfEvent(hour, minutes)
+
+    MONTHS = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC']
+
+    def __getTimeOfEvent(self, hour, minutes):
+        year = datetime.today().year
+        month = self.MONTHS.index(self.month) + 1
+        asDatetime = datetime(year, month, self.dayOfMonth, hour, minutes).strftime('%Y%m%d%H%M')
+        return asDatetime
 
     def toItem(self):
         parsedEvent = {}
         parsedEvent['title'] = self.title
         parsedEvent['month'] = self.month
+        parsedEvent['dayOfMonth'] = self.dayOfMonth
         parsedEvent['timeOfDay'] = self.timeOfDay
         parsedEvent['url'] = self.url
         parsedEvent['eventID'] = self.eventID
@@ -126,6 +137,7 @@ class Event:
         if self.lon:
             parsedEvent['lon'] = self.lon
         parsedEvent['host'] = self.host
+        parsedEvent['preciseTime'] = self.preciseTime
         return parsedEvent
 
 class EventFactory:
