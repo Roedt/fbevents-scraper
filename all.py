@@ -202,13 +202,10 @@ class EventFactory:
 
 
 class FacebookEventSpider(scrapy.Spider):
-    fburl = 'https://m.facebook.com/'
     name = 'facebook_event'
-    start_urls = (
-        fburl,
-    )
     allowed_domains = ['m.facebook.com']
-    top_url = fburl
+    top_url = 'https://m.facebook.com/'
+    start_urls = ( top_url, )
 
     def __init__(self, page, *args, **kwargs):
         self.displayName = page[0].strip()
@@ -216,31 +213,19 @@ class FacebookEventSpider(scrapy.Spider):
 
     def parse(self, response):
         try: 
-            url = '{top_url}/{username}/events/'.format(
-                top_url=self.top_url,
-                    username=self.target_username)
-            return scrapy.Request(url,
-            callback=self._get_facebook_events_ajax)
+            url = '{top_url}/{username}/events/'.format(top_url=self.top_url, username=self.target_username)
+            return scrapy.Request(url, callback=self._get_facebook_events_ajax)
         except Exception as e:
             print(e)
 
     def _get_facebook_events_ajax(self, response):
-        def get_fb_page_id():
-            p = re.compile(r'page_id=(\d*)')
-            search = re.search(p, str(response.body))
-            return search.group(1)
-
-        self.fb_page_id = get_fb_page_id()
-
-        return scrapy.Request(self.create_fb_event_ajax_url(self.fb_page_id,
-                                                            '0',
-                                                            'u_0_d'),
-                              callback=self._get_fb_event_links)
-
-    
+        page_id = re.search(re.compile(r'page_id=(\d*)'), str(response.body)).group(1)
+        url = self.create_fb_event_ajax_url(page_id)
+        return scrapy.Request(url, callback=self._get_fb_event_links)
 
     def _get_fb_event_links(self, response):
-        html_resp_unicode_decoded = ClutterTrimmer().trimAwayClutter(response.body.decode('unicode_escape'))
+        body = response.body.decode('unicode_escape')
+        html_resp_unicode_decoded = ClutterTrimmer().trimAwayClutter(body)
         eventsForThisPage = html_resp_unicode_decoded.split('<h1>')    
         eventsForThisPage.pop(0)
         if (not eventsForThisPage):
@@ -253,18 +238,13 @@ class FacebookEventSpider(scrapy.Spider):
             yield scrapy.Request(url, callback=eventFactory.parseSingleEvent, meta={'original': formattedEvent})
 
     @staticmethod
-    def create_fb_event_ajax_url(page_id, serialized_cursor, see_more_id):
-        event_url = 'https://m.facebook.com/pages/events/more'
+    def create_fb_event_ajax_url(page_id):
         query_str = urlencode(OrderedDict(page_id=page_id,
                                           query_type='upcoming',
-                                          see_more_id=see_more_id,
-                                          serialized_cursor=serialized_cursor))
-
-        return '{event_url}/?{query}'.format(event_url=event_url,
-                                             query=query_str)
+                                          see_more_id='u_0_d',
+                                          serialized_cursor='0'))
+        return '{event_url}/?{query}'.format(event_url='https://m.facebook.com/pages/events/more', query=query_str)
     
-
-
 def getPages():
     if runningLocally:
         return [
