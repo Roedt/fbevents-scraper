@@ -100,24 +100,35 @@ class Event:
             for month in monthsFound:
                 month = re.sub('<span' + r'.*?>', '', str(month))
                 self.month = re.sub('</span>', '', month)
-            daysOfMonth = soup.find_all('span', class_='_5a4z')
-            dayOfMonth = daysOfMonth[0]
-            dayOfMonth = re.sub('<span' + r'.*?>', '', str(dayOfMonth))
-            self.dayOfMonth = int(re.sub('</span>', '', dayOfMonth))
-            asJson = soup.find_all('script', id="u_0_n")[0]
+            #daysOfMonth = soup.find_all('span', class_='_5a4z')
+            #dayOfMonth = daysOfMonth[0]
+            #dayOfMonth = re.sub('<span' + r'.*?>', '', str(dayOfMonth))
+            #self.dayOfMonth = int(re.sub('</span>', '', dayOfMonth))
+#            asJson = soup.find_all('script', id="u_0_n")
+ #           if len(asJson) == 0:
+  #              asJson = soup.find_all('script', id="u_0_z")
+   #             asJson = asJson[0]
             
-            compiled = re.compile(r'startDate":".*","')
-            eventinfo = re.search(compiled, str(asJson))
-            first = eventinfo.group()
-            first = first.split('","')
+            compiled = re.compile(r'startDate":".*"')
+            first = re.search(compiled, str(soup)).group().split('","')
             self.title = first[2].split(':"')[1]
-            startDate = first[0].split('T')[1].split(':00+')[0].split(':')
+            timeOfEvent = first[0].split('T')
+            self.dayOfMonth = int(timeOfEvent[0].split('-')[2])
+
+            if len(monthsFound) == 0:
+                month = soup.find_all('span', class_='_38nk')
+                month = re.sub('<span' + r'.*?>', '', str(month))
+                self.month = re.sub('</span>', '', month).replace('[','').replace(']','')
+
+            startDate = timeOfEvent[1].split(':00+')[0].split(':')
             hour = int(startDate[0])
             minutes = int(startDate[1])
 
         self.timeOfDay = str(hour) + '.' + str(minutes)
         self.url = url
         self.eventID = re.sub('http' + r'.*?' + 'events/', '', self.url)
+        if ('event_time_id' in self.eventID):
+            self.eventID = self.eventID.split('=')[1].replace('&_rdr', '')
 
         fullLocation = ClutterTrimmer().trimSingleEvent(str(summaries[1])).split('<del>')
         self.location = fullLocation[0]
@@ -306,7 +317,15 @@ def fetch():
         if len(singlePage) == 3 and singlePage[2].strip():
             runner.crawl(FacebookEventSpider, displayName=singlePage[0].strip(), target_username=singlePage[2].strip(), eventID=None)
 
-    specificEventIds = [['rodttromso','340794273274895']]
+    specificEventIds = [
+        ['rodttromso','340794273274895'],
+        ['rodttromso', '340794273274895'],
+        ['rodttromso', '340794319941557'],
+        ['rodttromso', '340794316608224'],
+        ['rodttromso', '390521234886374'],
+        ['rodttromso', '390521238219707'],
+        ['rodttromso', '390521241553040']
+    ]
     for eventID in specificEventIds:
         runner.crawl(FacebookEventSpider, displayName=None, target_username=eventID[0], eventID=eventID[1])
     d = runner.join()
