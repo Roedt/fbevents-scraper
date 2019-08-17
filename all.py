@@ -106,16 +106,9 @@ class Event:
 
         self.timeOfDay = hour + '.' + minutes
         self.url = url
-        self.eventID = re.sub('http' + r'.*?' + 'events/', '', self.url)
-        if ('event_time_id' in self.eventID):
-            self.eventID = self.eventID.split('=')[1].replace('&_rdr', '')
+        self.eventID = self.__getEventID(self.url)
 
-        fullLocation = ClutterTrimmer().trimSingleEvent(str(summaries[1])).split('<del>')
-        self.location = fullLocation[0]
-        if (len(fullLocation) == 2):
-            self.address = fullLocation[1]
-        else:
-            self.address = ''
+        self.location, self.address = self.__getLocationAndAddress(summaries)
 
         self.lat, self.lon = self.__getPositionFromMap(positionFromMap)
 
@@ -123,6 +116,22 @@ class Event:
         self.preciseTime = self.__getTimeOfEvent(int(hour), int(minutes))
 
     MONTHS = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC']
+
+    def __getEventID(self, url): 
+        eventID = re.sub('http' + r'.*?' + 'events/', '', url)
+        if ('event_time_id' in eventID):
+            eventID = eventID.split('=')[1].replace('&_rdr', '')
+        return eventID
+
+
+    def __getLocationAndAddress(self, summaries):
+        fullLocation = ClutterTrimmer().trimSingleEvent(str(summaries[1])).split('<del>')
+        location = fullLocation[0]
+        if (len(fullLocation) == 2):
+            address = fullLocation[1]
+        else:
+            address = ''
+        return [location, address]
 
     def __getPositionFromMap(self, positionFromMap):
         if positionFromMap is not None:
