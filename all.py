@@ -242,6 +242,12 @@ class FacebookEventSpider(scrapy.Spider):
                 return scrapy.Request(url, callback=self._get_facebook_events_ajax)
             except Exception as e:
                 print(e)
+        else:
+            eventFactory = EventFactory(self.displayName, self.target_username)
+            formattedEvent = eventFactory.formatAsEvent('')
+            url = urljoin(self.top_url, 'events/' + self.eventID)
+            meta = {'original': formattedEvent}
+            return scrapy.Request(url, callback=eventFactory.parseSingleEvent, meta=meta)
 
     def _get_facebook_events_ajax(self, response):
         page_id = re.search(re.compile(r'page_id=(\d*)'), str(response.body)).group(1)
@@ -300,9 +306,9 @@ def fetch():
         if len(singlePage) == 3 and singlePage[2].strip():
             runner.crawl(FacebookEventSpider, displayName=singlePage[0].strip(), target_username=singlePage[2].strip(), eventID=None)
 
-    specificEventIds = []
+    specificEventIds = [['rodttromso','340794273274895']]
     for eventID in specificEventIds:
-        runner.crawl(FacebookEventSpider, eventID=eventID)
+        runner.crawl(FacebookEventSpider, displayName=None, target_username=eventID[0], eventID=eventID[1])
     d = runner.join()
     d.addBoth(lambda _: reactor.stop())
     reactor.run()
