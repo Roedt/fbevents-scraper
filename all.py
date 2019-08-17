@@ -86,16 +86,30 @@ class EventPersister:
         return datetime.now(pytz.timezone('Europe/Oslo'))
 
 class Event:
-    def __init__(self, original, response, summaries, positionFromMap, displayName):
-        self.title = original['title']
-        self.month = original['month']
-        self.dayOfMonth = int(original['dayOfMonth'])
-        timeOfDay = original['time'].split(' UTC')[0]
-        timeOfDay = datetime.strptime(timeOfDay, '%I:%M %p')
-        hour = int(datetime.strftime(timeOfDay, '%H'))
-        minutes = int(datetime.strftime(timeOfDay, '%M'))
-        self.timeOfDay = str(hour) + '.' + str(minutes)
-        self.url = response.url
+    def __init__(self, original, url, soup, summaries, positionFromMap, displayName):
+        if original:
+            self.title = original['title']
+            self.month = original['month']
+            self.dayOfMonth = int(original['dayOfMonth'])
+            timeOfDay = original['time'].split(' UTC')[0]
+            timeOfDay = datetime.strptime(timeOfDay, '%I:%M %p')
+            hour = int(datetime.strftime(timeOfDay, '%H'))
+            minutes = int(datetime.strftime(timeOfDay, '%M'))
+            self.timeOfDay = str(hour) + '.' + str(minutes)
+        else:
+            self.title = soup.find_all('title')
+            monthsFound = soup.find_all('span', class_='_5a4-')
+            first = monthsFound[0]
+            first = re.sub('<span' + r'.*?>', '', str(first))
+            self.month = re.sub('</span>', '', first)
+            daysOfMonth = soup.find_all('span', class_='_5a4z')
+            dayOfMonth = daysOfMonth[0]
+            dayOfMonth = re.sub('<span' + r'.*?>', '', str(dayOfMonth))
+            self.dayOfMonth = re.sub('</span>', '', dayOfMonth)
+            asJson = soup.find_all('script', id="u_0_n")
+
+
+        self.url = url
         self.eventID = re.sub('http' + r'.*?' + 'events/', '', self.url)
 
         fullLocation = ClutterTrimmer().trimSingleEvent(str(summaries[1])).split('<del>')
@@ -162,7 +176,7 @@ class EventFactory:
 
         original = response.meta.get('original')
         positionFromMap = self.getPositionFromMap(html_str)
-        parsedEvent = Event(original, response, summaries, positionFromMap, self.displayName)
+        parsedEvent = Event(original, response.url, soup, summaries, positionFromMap, self.displayName)
         event = parsedEvent.toItem()
 
         try:
@@ -173,6 +187,8 @@ class EventFactory:
     def formatAsEvent(self, eventIn):
         event = {}
         splitted = eventIn.split('<del>')
+        if (len(splitted) < 5):
+            return
         event['host'] = self.displayName
         event['title'] = splitted[0]
         event['month'] = splitted[1]
@@ -244,7 +260,7 @@ class FacebookEventSpider(scrapy.Spider):
                                           see_more_id='u_0_d',
                                           serialized_cursor='0'))
         return '{event_url}/?{query}'.format(event_url='https://m.facebook.com/pages/events/more', query=query_str)
-    
+
 def getPages():
     if runningLocally:
         return [
