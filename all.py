@@ -80,7 +80,7 @@ class EventPersister:
             self.__upload_blob('fb-events2', json.dumps(event, ensure_ascii=False), self.__getFolder() + name)
 
     def __getFolder(self):
-        return 'events/v3/' + self.__getToday().strftime('%Y%m%d') +'/'
+        return 'events/v2/' + self.__getToday().strftime('%Y%m%d') +'/'
 
     def __getToday(self):
         return datetime.now(pytz.timezone('Europe/Oslo'))
@@ -93,22 +93,18 @@ class Event:
             self.dayOfMonth = int(original['dayOfMonth'])
             timeOfDay = original['time'].split(' UTC')[0]
             timeOfDay = datetime.strptime(timeOfDay, '%I:%M %p')
-            hour = int(datetime.strftime(timeOfDay, '%H'))
-            minutes = int(datetime.strftime(timeOfDay, '%M'))
+            hour = datetime.strftime(timeOfDay, '%H')
+            minutes = datetime.strftime(timeOfDay, '%M')
         else:
+            self.dayOfMonth = int(self.__getDayOfMonth(soup))
             self.month = self.__getMonth(soup)
             
-            compiled = re.compile(r'startDate":".*"')
-            first = re.search(compiled, str(soup)).group().split('","')
-            self.title = first[2].split(':"')[1]
-            timeOfEvent = first[0].split('T')
-            self.dayOfMonth = int(timeOfEvent[0].split('-')[2])
+            eventInfo = re.search(re.compile(r'startDate":".*"'), str(soup)).group().split('","')
+            self.title = eventInfo[2].split(':"')[1]
 
-            startDate = timeOfEvent[1].split(':00+')[0].split(':')
-            hour = int(startDate[0])
-            minutes = int(startDate[1])
+            [hour, minutes] = eventInfo[0].split('T')[1].split(':00+')[0].split(':')
 
-        self.timeOfDay = str(hour) + '.' + str(minutes)
+        self.timeOfDay = hour + '.' + minutes
         self.url = url
         self.eventID = re.sub('http' + r'.*?' + 'events/', '', self.url)
         if ('event_time_id' in self.eventID):
@@ -121,17 +117,24 @@ class Event:
         else:
             self.address = ''
 
-        if positionFromMap is not None:
-            self.lat = positionFromMap['lat']
-            self.lon = positionFromMap['lon']
-        else:
-            self.lat = None
-            self.lon = None
+        self.lat, self.lon = self.__getPositionFromMap(positionFromMap)
 
         self.host = displayName
-        self.preciseTime = self.__getTimeOfEvent(hour, minutes)
+        self.preciseTime = self.__getTimeOfEvent(int(hour), int(minutes))
 
     MONTHS = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC']
+
+    def __getPositionFromMap(self, positionFromMap):
+        if positionFromMap is not None:
+            return [positionFromMap['lat'], positionFromMap['lon']]
+        else:
+            return [None, None]
+
+    def __getDayOfMonth(self, soup):
+        day = soup.find_all('span', class_='_38nj')
+        day = re.sub('<span' + r'.*?>', '', str(day))
+        day = re.sub('</span>', '', day).replace('[','').replace(']','')
+        return day
 
     def __getMonth(self, soup):
         monthsFound = soup.find_all('span', class_='_5a4-')
@@ -316,16 +319,14 @@ def fetch():
             runner.crawl(FacebookEventSpider, displayName=singlePage[0].strip(), target_username=singlePage[2].strip(), eventID=None)
 
     specificEventIds = [
-        ['rodttromso', 'Rødt Tromsø', '340794273274895'],
-        ['rodttromso', 'Rødt Tromsø', '340794273274895'],
-        ['rodttromso', 'Rødt Tromsø', '340794319941557'],
-        ['rodttromso', 'Rødt Tromsø', '340794316608224'],
-        ['rodttromso', 'Rødt Tromsø', '390521234886374'],
-        ['rodttromso', 'Rødt Tromsø', '390521238219707'],
-        ['rodttromso', 'Rødt Tromsø', '390521241553040']
+        ['rodttromso', '340794319941557'],
+        ['rodttromso', '340794316608224'],
+        ['rodttromso', '390521234886374'],
+        ['rodttromso', '390521238219707'],
+        ['rodttromso', '390521241553040']
     ]
     for eventID in specificEventIds:
-        runner.crawl(FacebookEventSpider, displayName=eventID[1], target_username=eventID[0], eventID=eventID[1])
+        runner.crawl(FacebookEventSpider, displayName=None, target_username=eventID[0], eventID=eventID[1])
     d = runner.join()
     d.addBoth(lambda _: reactor.stop())
     reactor.run()
