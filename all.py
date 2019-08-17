@@ -236,11 +236,12 @@ class FacebookEventSpider(scrapy.Spider):
         self.eventID = eventID
 
     def parse(self, response):
-        try: 
-            url = '{top_url}/{username}/events/'.format(top_url=self.top_url, username=self.target_username)
-            return scrapy.Request(url, callback=self._get_facebook_events_ajax)
-        except Exception as e:
-            print(e)
+        if not self.eventID:
+            try: 
+                url = '{top_url}/{username}/events/'.format(top_url=self.top_url, username=self.target_username)
+                return scrapy.Request(url, callback=self._get_facebook_events_ajax)
+            except Exception as e:
+                print(e)
 
     def _get_facebook_events_ajax(self, response):
         page_id = re.search(re.compile(r'page_id=(\d*)'), str(response.body)).group(1)
