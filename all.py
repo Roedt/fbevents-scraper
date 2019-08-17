@@ -80,7 +80,7 @@ class EventPersister:
             self.__upload_blob('fb-events2', json.dumps(event, ensure_ascii=False), self.__getFolder() + name)
 
     def __getFolder(self):
-        return 'events/v2/' + self.__getToday().strftime('%Y%m%d') +'/'
+        return 'events/v3/' + self.__getToday().strftime('%Y%m%d') +'/'
 
     def __getToday(self):
         return datetime.now(pytz.timezone('Europe/Oslo'))
@@ -316,16 +316,16 @@ def fetch():
             runner.crawl(FacebookEventSpider, displayName=singlePage[0].strip(), target_username=singlePage[2].strip(), eventID=None)
 
     specificEventIds = [
-        ['rodttromso','340794273274895'],
-        ['rodttromso', '340794273274895'],
-        ['rodttromso', '340794319941557'],
-        ['rodttromso', '340794316608224'],
-        ['rodttromso', '390521234886374'],
-        ['rodttromso', '390521238219707'],
-        ['rodttromso', '390521241553040']
+        ['rodttromso', 'Rødt Tromsø', '340794273274895'],
+        ['rodttromso', 'Rødt Tromsø', '340794273274895'],
+        ['rodttromso', 'Rødt Tromsø', '340794319941557'],
+        ['rodttromso', 'Rødt Tromsø', '340794316608224'],
+        ['rodttromso', 'Rødt Tromsø', '390521234886374'],
+        ['rodttromso', 'Rødt Tromsø', '390521238219707'],
+        ['rodttromso', 'Rødt Tromsø', '390521241553040']
     ]
     for eventID in specificEventIds:
-        runner.crawl(FacebookEventSpider, displayName=None, target_username=eventID[0], eventID=eventID[1])
+        runner.crawl(FacebookEventSpider, displayName=eventID[1], target_username=eventID[0], eventID=eventID[1])
     d = runner.join()
     d.addBoth(lambda _: reactor.stop())
     reactor.run()
