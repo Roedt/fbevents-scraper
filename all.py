@@ -95,9 +95,7 @@ class Event:
             timeOfDay = datetime.strptime(timeOfDay, '%I:%M %p')
             hour = int(datetime.strftime(timeOfDay, '%H'))
             minutes = int(datetime.strftime(timeOfDay, '%M'))
-            self.timeOfDay = str(hour) + '.' + str(minutes)
         else:
-            self.title = soup.find_all('title')
             monthsFound = soup.find_all('span', class_='_5a4-')
             for month in monthsFound:
                 month = re.sub('<span' + r'.*?>', '', str(month))
@@ -112,10 +110,12 @@ class Event:
             eventinfo = re.search(compiled, str(asJson))
             first = eventinfo.group()
             first = first.split('","')
+            self.title = first[2].split(':"')[1]
             startDate = first[0].split('T')[1].split(':00+')[0].split(':')
             hour = int(startDate[0])
             minutes = int(startDate[1])
 
+        self.timeOfDay = str(hour) + '.' + str(minutes)
         self.url = url
         self.eventID = re.sub('http' + r'.*?' + 'events/', '', self.url)
 
