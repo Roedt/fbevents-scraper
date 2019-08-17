@@ -99,15 +99,22 @@ class Event:
         else:
             self.title = soup.find_all('title')
             monthsFound = soup.find_all('span', class_='_5a4-')
-            first = monthsFound[0]
-            first = re.sub('<span' + r'.*?>', '', str(first))
-            self.month = re.sub('</span>', '', first)
+            for month in monthsFound:
+                month = re.sub('<span' + r'.*?>', '', str(month))
+                self.month = re.sub('</span>', '', month)
             daysOfMonth = soup.find_all('span', class_='_5a4z')
             dayOfMonth = daysOfMonth[0]
             dayOfMonth = re.sub('<span' + r'.*?>', '', str(dayOfMonth))
-            self.dayOfMonth = re.sub('</span>', '', dayOfMonth)
-            asJson = soup.find_all('script', id="u_0_n")
-
+            self.dayOfMonth = int(re.sub('</span>', '', dayOfMonth))
+            asJson = soup.find_all('script', id="u_0_n")[0]
+            
+            compiled = re.compile(r'startDate":".*","')
+            eventinfo = re.search(compiled, str(asJson))
+            first = eventinfo.group()
+            first = first.split('","')
+            startDate = first[0].split('T')[1].split(':00+')[0].split(':')
+            hour = int(startDate[0])
+            minutes = int(startDate[1])
 
         self.url = url
         self.eventID = re.sub('http' + r'.*?' + 'events/', '', self.url)
