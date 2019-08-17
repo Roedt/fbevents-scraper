@@ -100,14 +100,6 @@ class Event:
             for month in monthsFound:
                 month = re.sub('<span' + r'.*?>', '', str(month))
                 self.month = re.sub('</span>', '', month)
-            #daysOfMonth = soup.find_all('span', class_='_5a4z')
-            #dayOfMonth = daysOfMonth[0]
-            #dayOfMonth = re.sub('<span' + r'.*?>', '', str(dayOfMonth))
-            #self.dayOfMonth = int(re.sub('</span>', '', dayOfMonth))
-#            asJson = soup.find_all('script', id="u_0_n")
- #           if len(asJson) == 0:
-  #              asJson = soup.find_all('script', id="u_0_z")
-   #             asJson = asJson[0]
             
             compiled = re.compile(r'startDate":".*"')
             first = re.search(compiled, str(soup)).group().split('","')
