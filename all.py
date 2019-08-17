@@ -96,21 +96,13 @@ class Event:
             hour = int(datetime.strftime(timeOfDay, '%H'))
             minutes = int(datetime.strftime(timeOfDay, '%M'))
         else:
-            monthsFound = soup.find_all('span', class_='_5a4-')
-            for month in monthsFound:
-                month = re.sub('<span' + r'.*?>', '', str(month))
-                self.month = re.sub('</span>', '', month)
+            self.month = self.__getMonth(soup)
             
             compiled = re.compile(r'startDate":".*"')
             first = re.search(compiled, str(soup)).group().split('","')
             self.title = first[2].split(':"')[1]
             timeOfEvent = first[0].split('T')
             self.dayOfMonth = int(timeOfEvent[0].split('-')[2])
-
-            if len(monthsFound) == 0:
-                month = soup.find_all('span', class_='_38nk')
-                month = re.sub('<span' + r'.*?>', '', str(month))
-                self.month = re.sub('</span>', '', month).replace('[','').replace(']','')
 
             startDate = timeOfEvent[1].split(':00+')[0].split(':')
             hour = int(startDate[0])
@@ -140,6 +132,18 @@ class Event:
         self.preciseTime = self.__getTimeOfEvent(hour, minutes)
 
     MONTHS = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC']
+
+    def __getMonth(self, soup):
+        monthsFound = soup.find_all('span', class_='_5a4-')
+        for month in monthsFound:
+            month = re.sub('<span' + r'.*?>', '', str(month))
+            month = re.sub('</span>', '', month)
+
+        if len(monthsFound) == 0:
+            month = soup.find_all('span', class_='_38nk')
+            month = re.sub('<span' + r'.*?>', '', str(month))
+            month = re.sub('</span>', '', month).replace('[','').replace(']','')
+        return month
 
     def __getTimeOfEvent(self, hour, minutes):
         year = datetime.today().year
