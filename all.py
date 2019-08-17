@@ -297,6 +297,10 @@ def fetch():
         singlePage[0] = 'Rødt ' + singlePage[0]
         if len(singlePage) == 3 and singlePage[2].strip():
             runner.crawl(FacebookEventSpider, displayName=singlePage[0].strip(), target_username=singlePage[2].strip())
+
+    specificEventIds = []
+    for eventID in specificEventIds:
+        runner.crawl(FacebookEventSpider, eventID)
     d = runner.join()
     d.addBoth(lambda _: reactor.stop())
     reactor.run()
