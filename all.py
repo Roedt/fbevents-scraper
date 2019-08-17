@@ -80,7 +80,7 @@ class EventPersister:
             self.__upload_blob('fb-events2', json.dumps(event, ensure_ascii=False), self.__getFolder() + name)
 
     def __getFolder(self):
-        return 'events/v2/' + self.__getToday().strftime('%Y%m%d') +'/'
+        return 'events/v3/' + self.__getToday().strftime('%Y%m%d') +'/'
 
     def __getToday(self):
         return datetime.now(pytz.timezone('Europe/Oslo'))
