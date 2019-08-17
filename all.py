@@ -230,9 +230,9 @@ class FacebookEventSpider(scrapy.Spider):
     top_url = 'https://m.facebook.com/'
     start_urls = ( top_url, )
 
-    def __init__(self, page, *args, **kwargs):
-        self.displayName = page[0].strip()
-        self.target_username = page[2].strip()
+    def __init__(self, displayName, target_username):
+        self.displayName = displayName
+        self.target_username = target_username
 
     def parse(self, response):
         try: 
@@ -296,7 +296,7 @@ def fetch():
         singlePage = page.split(';')
         singlePage[0] = 'Rødt ' + singlePage[0]
         if len(singlePage) == 3 and singlePage[2].strip():
-            runner.crawl(FacebookEventSpider, page=singlePage)
+            runner.crawl(FacebookEventSpider, displayName=singlePage[0].strip(), target_username=singlePage[2].strip())
     d = runner.join()
     d.addBoth(lambda _: reactor.stop())
     reactor.run()
