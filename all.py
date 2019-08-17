@@ -225,7 +225,9 @@ class EventFactory:
         
     def getPositionFromMap(self, html):
         try:
-            lmindex = html.index("26daddr%3D")
+            if not '26daddr%3D' in html:
+                return
+            lmindex = html.index('26daddr%3D')
             pos = html[lmindex+10:lmindex+45].split('%252C')
             lat = pos[0]
             lon = pos[1].split('%')[0]
