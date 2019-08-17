@@ -123,7 +123,6 @@ class Event:
             eventID = eventID.split('=')[1].replace('&_rdr', '')
         return eventID
 
-
     def __getLocationAndAddress(self, summaries):
         fullLocation = ClutterTrimmer().trimSingleEvent(str(summaries[1])).split('<del>')
         location = fullLocation[0]
@@ -328,14 +327,14 @@ def fetch():
             runner.crawl(FacebookEventSpider, displayName=singlePage[0].strip(), target_username=singlePage[2].strip(), eventID=None)
 
     specificEventIds = [
-        ['rodttromso', '340794319941557'],
-        ['rodttromso', '340794316608224'],
-        ['rodttromso', '390521234886374'],
-        ['rodttromso', '390521238219707'],
-        ['rodttromso', '390521241553040']
+        ['rodttromso', 'Rødt Tromsø', '340794319941557'],
+        ['rodttromso', 'Rødt Tromsø', '340794316608224'],
+        ['rodttromso', 'Rødt Tromsø', '390521234886374'],
+        ['rodttromso', 'Rødt Tromsø', '390521238219707'],
+        ['rodttromso', 'Rødt Tromsø', '390521241553040']
     ]
     for eventID in specificEventIds:
-        runner.crawl(FacebookEventSpider, displayName=None, target_username=eventID[0], eventID=eventID[1])
+        runner.crawl(FacebookEventSpider, displayName=eventID[1], target_username=eventID[0], eventID=eventID[2])
     d = runner.join()
     d.addBoth(lambda _: reactor.stop())
     reactor.run()
