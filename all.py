@@ -337,8 +337,8 @@ def fetch():
     ]
 
     if int(datetime.now().strftime('%H')) % 10 == 0:
-    for eventID in specificEventIds:
-        runner.crawl(FacebookEventSpider, displayName=eventID[1], target_username=eventID[0], eventID=eventID[2])
+        for eventID in specificEventIds:
+            runner.crawl(FacebookEventSpider, displayName=eventID[1], target_username=eventID[0], eventID=eventID[2])
     d = runner.join()
     d.addBoth(lambda _: reactor.stop())
     reactor.run()
