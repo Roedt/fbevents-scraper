@@ -124,7 +124,9 @@ class Event:
         return eventID
 
     def __getLocationAndAddress(self, summaries):
-        fullLocation = ClutterTrimmer().trimSingleEvent(str(summaries[1])).split('<del>')
+        if len(summaries) < 2:
+            return ['', '']
+        fullLocation = ClutterTrimmer().trimSingleEvent(str(summaries[0])).split('<del>')
         location = fullLocation[0]
         if (len(fullLocation) == 2):
             address = fullLocation[1]
@@ -212,7 +214,7 @@ class EventFactory:
     def formatAsEvent(self, eventIn):
         event = {}
         splitted = eventIn.split('<del>')
-        if (len(splitted) < 5):
+        if len(splitted) < 5:
             return
         event['host'] = self.displayName
         event['title'] = splitted[0]
@@ -220,7 +222,9 @@ class EventFactory:
         event['dayOfMonth'] = splitted[2]
         event['time'] = splitted[3]
         event['location'] = splitted[4]
-        if not splitted[5].startswith("<a href"):
+        if len(splitted) == 6:
+            event['url'] = splitted[4].split("=\"/events/")[1].replace('" ', '')
+        elif (not splitted[5].startswith("<a href")):
             event['city'] = splitted[5]
             event['url'] = splitted[6]
         else:
