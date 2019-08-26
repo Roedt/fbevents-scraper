@@ -80,7 +80,7 @@ class EventPersister:
             self.__upload_blob('fb-events2', json.dumps(event, ensure_ascii=False), self.__getFolder() + name)
 
     def __getFolder(self):
-        return 'events/v4/' + self.__getToday().strftime('%Y%m%d') +'/'
+        return 'events/v5/' + self.__getToday().strftime('%Y%m%d') +'/'
 
     def __getToday(self):
         return datetime.now(pytz.timezone('Europe/Oslo'))
@@ -117,6 +117,8 @@ class Event:
                 minutes = time[1]
 
         self.timeOfDay = hour + '.' + minutes
+        
+        self.dayOfMonth, self.month = self.__getFirstRecurringUpcoming(soup)
         self.eventID, self.url = self.__getEventID(url, original)
 
         self.location, self.address = self.__getLocationAndAddress(summaries)
@@ -180,6 +182,29 @@ class Event:
         month = self.MONTHS.index(self.month) + 1
         asDatetime = datetime(year, month, self.dayOfMonth, hour, minutes).strftime('%Y%m%d%H%M')
         return asDatetime
+
+    def __getFirstRecurringUpcoming(self, soup):
+        try:
+            now = datetime.now()
+            originalTime = datetime(now.year,  self.MONTHS.index(self.month) + 1, self.dayOfMonth)
+            if now <= originalTime:
+                return self.dayOfMonth, self.month
+            startingPoint = soup.text.split('setIsDetailedProfiler')
+            if len(startingPoint) < 3:
+                return self.dayOfMonth, self.month
+            startingPoint = startingPoint[2].split('AgainCancelLoading')[0]
+            startingPoint = startingPoint.split('InterestedInviteMoreSummary')
+            if len(startingPoint) < 2:
+                return self.dayOfMonth, self.month
+            startingPoint = startingPoint[1]
+            startingPoint = re.sub(r'.*?' + 'UTC\+[0-9]+', '', startingPoint)
+            try:
+                dayOfMonth = int(startingPoint[3:5])
+            except ValueError:
+                dayOfMonth = int(startingPoint[3:4])
+            return dayOfMonth, startingPoint[:3]
+        except Exception as e:
+            return self.dayOfMonth, self.month
 
     def toItem(self):
         parsedEvent = {}
