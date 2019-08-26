@@ -80,7 +80,7 @@ class EventPersister:
             self.__upload_blob('fb-events2', json.dumps(event, ensure_ascii=False), self.__getFolder() + name)
 
     def __getFolder(self):
-        return 'events/v3/' + self.__getToday().strftime('%Y%m%d') +'/'
+        return 'events/v4/' + self.__getToday().strftime('%Y%m%d') +'/'
 
     def __getToday(self):
         return datetime.now(pytz.timezone('Europe/Oslo'))
@@ -99,14 +99,25 @@ class Event:
             self.dayOfMonth = int(self.__getDayOfMonth(soup))
             self.month = self.__getMonth(soup)
             
-            eventInfo = re.search(re.compile(r'startDate":".*"'), str(soup)).group().split('","')
+            eventSearch = re.search(re.compile(r'startDate":".*"'), str(soup))
+            if eventSearch is not None:
+                eventInfo = eventSearch.group()
+                eventInfo = eventInfo.split('","')
             self.title = eventInfo[2].split(':"')[1]
-
             [hour, minutes] = eventInfo[0].split('T')[1].split(':00+')[0].split(':')
+            else:
+                self.title = ''
+                time = soup.find_all('div', class_='_52je _52jb _52jg')
+                time = str(time[0]).split(' at ')
+                time = time[1].split(' UTC')[0]
+                timeOfDay = datetime.strptime(timeOfDay, '%I:%M %p')
+                hour = datetime.strftime(timeOfDay, '%H')
+                minutes = datetime.strftime(timeOfDay, '%M')
+                # = time[0]
+                minutes = time[1]
 
         self.timeOfDay = hour + '.' + minutes
-        self.url = url
-        self.eventID = self.__getEventID(self.url)
+        self.eventID, self.url = self.__getEventID(url, original)
 
         self.location, self.address = self.__getLocationAndAddress(summaries)
 
@@ -117,14 +128,20 @@ class Event:
 
     MONTHS = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC']
 
-    def __getEventID(self, url): 
+    def __getEventID(self, url, original): 
         eventID = re.sub('http' + r'.*?' + 'events/', '', url)
         if ('event_time_id' in eventID):
             eventID = eventID.split('=')[1].replace('&_rdr', '')
-        return eventID
+        if (url == 'https://m.facebook.com/events/' and eventID == '' and original):
+            location = original['location']
+            eventID = location.replace('<a href="/events/', '').replace('" ', '')
+            url = url + eventID
+        return eventID, url
 
     def __getLocationAndAddress(self, summaries):
-        fullLocation = ClutterTrimmer().trimSingleEvent(str(summaries[1])).split('<del>')
+        if len(summaries) < 2:
+            return ['', '']
+        fullLocation = ClutterTrimmer().trimSingleEvent(str(summaries[0])).split('<del>')
         location = fullLocation[0]
         if (len(fullLocation) == 2):
             address = fullLocation[1]
@@ -212,7 +229,7 @@ class EventFactory:
     def formatAsEvent(self, eventIn):
         event = {}
         splitted = eventIn.split('<del>')
-        if (len(splitted) < 5):
+        if len(splitted) < 5:
             return
         event['host'] = self.displayName
         event['title'] = splitted[0]
@@ -220,7 +237,9 @@ class EventFactory:
         event['dayOfMonth'] = splitted[2]
         event['time'] = splitted[3]
         event['location'] = splitted[4]
-        if not splitted[5].startswith("<a href"):
+        if len(splitted) == 6:
+            event['url'] = splitted[4].split("=\"/events/")[1].replace('" ', '')
+        elif (not splitted[5].startswith("<a href")):
             event['city'] = splitted[5]
             event['url'] = splitted[6]
         else:
@@ -299,9 +318,9 @@ class FacebookEventSpider(scrapy.Spider):
 def getPages():
     if runningLocally:
         return [
-            'Oslo Søndre Nordstrand;Rødt Oslo; RoedtSondreNordstrand',
-            'Oslo Skole og Barnehage;Rødt Oslo;',
-            'Rødt;;Roedt'
+            'Oslo Søndre Nordstrand;Oslo; RoedtSondreNordstrand',
+            'Oslo Skole og Barnehage;Oslo;',
+            'nasjonalt;;Roedt'
         ]
     now = int(datetime.now().strftime('%H'))
     if now % 2 == 0:
@@ -327,8 +346,6 @@ def fetch():
             runner.crawl(FacebookEventSpider, displayName=singlePage[0].strip(), target_username=singlePage[2].strip(), eventID=None)
 
     specificEventIds = [
-#        ['rodtlillehammer', 'Rødt Lillehammer', '394312364560871'], # Valgmøte Rødt Lillehammer
-        ['rodttromso', 'Rødt Tromsø', '340794313274891'], # Treff Rødt Tromsø, 24 aug
         ['rodttromso', 'Rødt Tromsø', '340794319941557'], # Treff Rødt Tromsø, 31 aug
         ['rodttromso', 'Rødt Tromsø', '340794316608224'], # Treff Rødt Tromsø, 7. sept
         ['rodttromso', 'Rødt Tromsø', '390521234886374'], # Vkaktivistmøte, 22.aug
