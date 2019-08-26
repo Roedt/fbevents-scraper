@@ -103,8 +103,8 @@ class Event:
             if eventSearch is not None:
                 eventInfo = eventSearch.group()
                 eventInfo = eventInfo.split('","')
-            self.title = eventInfo[2].split(':"')[1]
-            [hour, minutes] = eventInfo[0].split('T')[1].split(':00+')[0].split(':')
+                self.title = eventInfo[2].split(':"')[1]
+                [hour, minutes] = eventInfo[0].split('T')[1].split(':00+')[0].split(':')
             else:
                 self.title = ''
                 time = soup.find_all('div', class_='_52je _52jb _52jg')
