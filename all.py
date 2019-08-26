@@ -346,11 +346,11 @@ def fetch():
             runner.crawl(FacebookEventSpider, displayName=singlePage[0].strip(), target_username=singlePage[2].strip(), eventID=None)
 
     specificEventIds = [
-        ['rodttromso', 'Tromsø', '340794319941557'], # Treff Rødt Tromsø, 31 aug
-        ['rodttromso', 'Tromsø', '340794316608224'], # Treff Rødt Tromsø, 7. sept
-        ['rodttromso', 'Tromsø', '390521234886374'], # Vkaktivistmøte, 22.aug
-        ['rodttromso', 'Tromsø', '390521238219707'], # Vkaktivistmøte, 29.aug
-        ['rodttromso', 'Tromsø', '390521241553040']  # Vkaktivistmøte, 5. sept
+        ['rodttromso', 'Rødt Tromsø', '340794319941557'], # Treff Rødt Tromsø, 31 aug
+        ['rodttromso', 'Rødt Tromsø', '340794316608224'], # Treff Rødt Tromsø, 7. sept
+        ['rodttromso', 'Rødt Tromsø', '390521234886374'], # Vkaktivistmøte, 22.aug
+        ['rodttromso', 'Rødt Tromsø', '390521238219707'], # Vkaktivistmøte, 29.aug
+        ['rodttromso', 'Rødt Tromsø', '390521241553040']  # Vkaktivistmøte, 5. sept
     ]
     for eventID in specificEventIds:
         runner.crawl(FacebookEventSpider, displayName=eventID[1], target_username=eventID[0], eventID=eventID[2])
