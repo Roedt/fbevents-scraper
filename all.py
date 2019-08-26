@@ -379,7 +379,7 @@ def fetch():
         ['rodttromso', 'Rødt Tromsø', '390521241553040']  # Vkaktivistmøte, 5. sept
     ]
 
-    if int(datetime.now().strftime('%H')) % 10 == 0:
+    if int(datetime.now().strftime('%H')) % 6 == 0:
         for eventID in specificEventIds:
             runner.crawl(FacebookEventSpider, displayName=eventID[1], target_username=eventID[0], eventID=eventID[2])
     d = runner.join()
