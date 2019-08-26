@@ -99,14 +99,25 @@ class Event:
             self.dayOfMonth = int(self.__getDayOfMonth(soup))
             self.month = self.__getMonth(soup)
             
-            eventInfo = re.search(re.compile(r'startDate":".*"'), str(soup)).group().split('","')
+            eventSearch = re.search(re.compile(r'startDate":".*"'), str(soup))
+            if eventSearch is not None:
+                eventInfo = eventSearch.group()
+                eventInfo = eventInfo.split('","')
             self.title = eventInfo[2].split(':"')[1]
-
             [hour, minutes] = eventInfo[0].split('T')[1].split(':00+')[0].split(':')
+            else:
+                self.title = ''
+                time = soup.find_all('div', class_='_52je _52jb _52jg')
+                time = str(time[0]).split(' at ')
+                time = time[1].split(' UTC')[0]
+                timeOfDay = datetime.strptime(timeOfDay, '%I:%M %p')
+                hour = datetime.strftime(timeOfDay, '%H')
+                minutes = datetime.strftime(timeOfDay, '%M')
+                # = time[0]
+                minutes = time[1]
 
         self.timeOfDay = hour + '.' + minutes
-        self.url = url
-        self.eventID = self.__getEventID(self.url)
+        self.eventID, self.url = self.__getEventID(url, original)
 
         self.location, self.address = self.__getLocationAndAddress(summaries)
 
@@ -117,11 +128,15 @@ class Event:
 
     MONTHS = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC']
 
-    def __getEventID(self, url): 
+    def __getEventID(self, url, original): 
         eventID = re.sub('http' + r'.*?' + 'events/', '', url)
         if ('event_time_id' in eventID):
             eventID = eventID.split('=')[1].replace('&_rdr', '')
-        return eventID
+        if (url == 'https://m.facebook.com/events/' and eventID == '' and original):
+            location = original['location']
+            eventID = location.replace('<a href="/events/', '').replace('" ', '')
+            url = url + eventID
+        return eventID, url
 
     def __getLocationAndAddress(self, summaries):
         if len(summaries) < 2:
