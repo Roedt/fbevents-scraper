@@ -152,6 +152,8 @@ class Event:
     def __getPositionFromMap(self, positionFromMap):
         if positionFromMap is not None:
             return [positionFromMap['lat'], positionFromMap['lon']]
+        elif self.eventID == '703005723505583':
+            return ['59.44216', '10.12112']
         else:
             return [None, None]
 
