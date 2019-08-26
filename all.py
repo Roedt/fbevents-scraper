@@ -153,7 +153,7 @@ class Event:
         if positionFromMap is not None:
             return [positionFromMap['lat'], positionFromMap['lon']]
         elif self.eventID == '703005723505583':
-            return ['59.44216', '10.12112']
+            return ['59.739340', '10.203205']
         else:
             return [None, None]
 
