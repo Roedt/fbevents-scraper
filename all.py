@@ -372,9 +372,7 @@ def fetch():
         if len(singlePage) == 3 and singlePage[2].strip():
             runner.crawl(FacebookEventSpider, displayName=singlePage[0].strip(), target_username=singlePage[2].strip(), eventID=None)
 
-    specificEventIds = [
-        ['rodttromso', 'Rødt Tromsø', '340794316608224'] # Treff Rødt Tromsø, 7. sept
-    ]
+    specificEventIds = []
 
     if int(datetime.now().strftime('%H')) % 6 == 0:
         for eventID in specificEventIds:
