@@ -177,9 +177,18 @@ class Event:
             month = re.sub('</span>', '', month).replace('[','').replace(']','')
         return month
 
+    def __findYear(self, month):
+        today = datetime.today()
+        thisYear = today.year
+        if (month < today.month):
+            return thisYear+1
+        elif (month == today.month and today.day > self.dayOfMonth):
+            return thisYear+1
+        return thisYear
+
     def __getTimeOfEvent(self, hour, minutes):
-        year = datetime.today().year
         month = self.MONTHS.index(self.month) + 1
+        year = self.__findYear(month)
         asDatetime = datetime(year, month, self.dayOfMonth, hour, minutes).strftime('%Y%m%d%H%M')
         return asDatetime
 
