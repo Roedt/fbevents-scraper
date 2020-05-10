@@ -1,4 +1,4 @@
-Scrapy==1.4.0
+Scrapy==2.1.0
 beautifulsoup4==4.9.0
 google-cloud-storage==1.28.1
 pytz==2020.1
