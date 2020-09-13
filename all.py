@@ -1,5 +1,4 @@
 # coding=utf-8
-runningLocally = True
 
 from os import getenv
 from os import path
@@ -13,6 +12,10 @@ import scrapy.crawler as crawler
 from collections import OrderedDict
 from bs4 import BeautifulSoup
 from urllib.parse import urlencode, urljoin
+
+envValue = getenv('runningLocally', True)
+runningLocally = True == envValue
+
 if runningLocally == False:
     from google.cloud import storage
 import json
