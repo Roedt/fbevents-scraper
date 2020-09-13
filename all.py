@@ -83,7 +83,7 @@ class EventPersister:
             self.__upload_blob('fb-events2', json.dumps(event, ensure_ascii=False), self.__getFolder() + name)
 
     def __getFolder(self):
-        return 'events/v5/' + self.__getToday().strftime('%Y%m%d') +'/'
+        return 'events/v6/' + self.__getToday().strftime('%Y%m%d') +'/'
 
     def __getToday(self):
         return datetime.now(pytz.timezone('Europe/Oslo'))
@@ -358,6 +358,7 @@ class FacebookEventSpider(scrapy.Spider):
         return '{event_url}/?{query}'.format(event_url='https://m.facebook.com/pages/events/more', query=query_str)
 
 def getPages():
+    print('Loading pages')
     pagelist = 'pages.txt'
     if not runningLocally:
         client = storage.Client()
@@ -365,14 +366,15 @@ def getPages():
 
         blob = bucket.get_blob(pagelist)
         pages = str(blob.download_as_string(), 'utf-8')
-        pages = pages.split('\r\n')
     else:
         pages = open(pagelist, "r")
         pages = pages.read()
-        pages = pages.split('\n')
+    pages = pages.split('\n')
+    print(pages)
     return pages
 
 def fetch():
+    print('Crawling...')
     runner = crawler.CrawlerRunner({
         'USER_AGENT': 'Mozilla/5.0 (Linux; U; Android 4.0.3; ko-kr; LG-L160L Build/IML74K) AppleWebkit/534.30 (KHTML, like Gecko) Version/4.0 Mobile Safari/534.30'
     })
