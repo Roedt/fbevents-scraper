@@ -328,7 +328,10 @@ class FacebookEventSpider(scrapy.Spider):
             return scrapy.Request(url, callback=eventFactory.parseSingleEvent, meta=meta)
 
     def _get_facebook_events_ajax(self, response):
-        page_id = re.search(re.compile(r'page_id=(\d*)'), str(response.body)).group(1)
+        page_id = re.search(re.compile(r'page_id=(\d*)'), str(response.body))
+        if (page_id is None):
+            return
+        page_id = page_id.group(1)
         url = self.create_fb_event_ajax_url(page_id)
         return scrapy.Request(url, callback=self._get_fb_event_links)
 
@@ -355,7 +358,7 @@ class FacebookEventSpider(scrapy.Spider):
         return '{event_url}/?{query}'.format(event_url='https://m.facebook.com/pages/events/more', query=query_str)
 
 def getPages():
-    if runningLocally:
+    if False:
         return [
             'Oslo Søndre Nordstrand;Oslo; RoedtSondreNordstrand',
             'Oslo Skole og Barnehage;Oslo;',
@@ -366,12 +369,18 @@ def getPages():
         pagelist = 'pages3'
     else:
         pagelist = 'pages4'
-    client = storage.Client()
-    bucket = client.bucket('fb-events2')
 
-    blob = bucket.get_blob(pagelist + '.txt')
-    pages = str(blob.download_as_string(), 'utf-8')
-    pages = pages.split('\r\n')
+    if not runningLocally:
+        client = storage.Client()
+        bucket = client.bucket('fb-events2')
+
+        blob = bucket.get_blob(pagelist + '.txt')
+        pages = str(blob.download_as_string(), 'utf-8')
+        pages = pages.split('\r\n')
+    else:
+        pages = open(pagelist+".txt", "r")
+        pages = pages.read()
+        pages = pages.split('\n')
     return pages
 
 def fetch():
