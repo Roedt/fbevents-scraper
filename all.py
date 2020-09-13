@@ -358,27 +358,16 @@ class FacebookEventSpider(scrapy.Spider):
         return '{event_url}/?{query}'.format(event_url='https://m.facebook.com/pages/events/more', query=query_str)
 
 def getPages():
-    if False:
-        return [
-            'Oslo Søndre Nordstrand;Oslo; RoedtSondreNordstrand',
-            'Oslo Skole og Barnehage;Oslo;',
-            'nasjonalt;;Roedt'
-        ]
-    now = int(datetime.now().strftime('%H'))
-    if now % 2 == 0:
-        pagelist = 'pages3'
-    else:
-        pagelist = 'pages4'
-
+    pagelist = 'pages.txt'
     if not runningLocally:
         client = storage.Client()
         bucket = client.bucket('fb-events2')
 
-        blob = bucket.get_blob(pagelist + '.txt')
+        blob = bucket.get_blob(pagelist)
         pages = str(blob.download_as_string(), 'utf-8')
         pages = pages.split('\r\n')
     else:
-        pages = open(pagelist+".txt", "r")
+        pages = open(pagelist, "r")
         pages = pages.read()
         pages = pages.split('\n')
     return pages
