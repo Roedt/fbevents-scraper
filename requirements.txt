@@ -1,4 +1,4 @@
 Scrapy==2.4.0
 beautifulsoup4==4.9.3
-google-cloud-storage==1.32.0
+google-cloud-storage==1.33.0
 pytz==2020.4
